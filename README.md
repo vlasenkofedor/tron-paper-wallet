@@ -71,5 +71,5 @@ certutil -hashfile coinductor-paper.html SHA256
 
 ---
 
-## 📄 License
+## ⚖️ License
 MIT © [coinductor.io](https://coinductor.io)
