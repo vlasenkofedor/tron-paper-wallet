@@ -1,0 +1,2346 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Coinductor Paper Wallet — TRON Wallet Generator, Secure &amp; Offline</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        /* --- COINDUCTOR DESIGN SYSTEM & TYPOGRAPHY --- */
+        html {
+            /* Match body background so overscroll bounce never shows white */
+            background-color: #B8CCDA;
+            overscroll-behavior: none;
+            -webkit-overflow-scrolling: touch;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            background-color: #C7D4E1;
+            background-image: linear-gradient(135deg, #C7D4E1 0%, #A7B9CB 100%);
+            background-repeat: no-repeat;
+            /* NOTE: background-attachment:fixed removed — it causes white flash repaints on iOS/Safari */
+            background-size: cover;
+            color: #0F2537;
+            font-size: 15px;
+            min-height: 100svh;    /* svh avoids iOS toolbar resize jitter */
+            line-height: 1.6;
+            display: flex;
+            flex-direction: column;
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+            overscroll-behavior: none;
+        }
+
+
+        h1, h2, h3, h4 {
+            font-weight: 700;
+            color: #0F2537;
+            letter-spacing: -0.5px;
+        }
+
+        header {
+            max-width: 950px;
+            width: 100%;
+            margin: 0 auto;
+            padding: 40px 20px 20px 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .logo-container {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .logo-icon {
+            width: 36px;
+            height: 36px;
+            background: #0F2537;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 700;
+            color: #FFFFFF;
+            font-size: 18px;
+        }
+
+        .logo-text {
+            font-size: 22px;
+            font-weight: 700;
+            letter-spacing: -0.5px;
+            color: #0F2537;
+        }
+
+        .badge {
+            background: rgba(30, 94, 240, 0.08);
+            border: 1px solid rgba(30, 94, 240, 0.15);
+            color: #1E5EF0;
+            padding: 5px 12px;
+            border-radius: 99px;
+            font-size: 13px;
+            font-weight: 500;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .badge-dot {
+            width: 6px;
+            height: 6px;
+            background-color: #1E5EF0;
+            border-radius: 50%;
+            display: inline-block;
+            box-shadow: 0 0 6px #1E5EF0;
+        }
+
+        /* --- LAYOUT STRUCTURE --- */
+        main {
+            max-width: 950px;
+            width: 100%;
+            margin: 0 auto;
+            padding: 0 20px 40px 20px;
+            flex-grow: 1;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        /* --- COINDUCTOR LIGHT GLASS CARDS --- */
+        .glass-card {
+            /* backdrop-filter:blur removed — causes GPU compositor layer white flash on scroll */
+            background: rgba(220, 234, 244, 0.92);
+            border: 1px solid rgba(255, 255, 255, 0.68);
+            border-radius: 18px;
+            padding: 32px;
+            box-shadow: rgba(42, 67, 84, 0.08) 0px 18px 36px 0px;
+            width: 100%;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+            transition: border-color 0.25s ease, box-shadow 0.25s ease;
+            /* Pre-promote to own GPU layer to avoid layer creation during scroll */
+            transform: translateZ(0);
+            -webkit-transform: translateZ(0);
+        }
+
+        .glass-card:hover {
+            border-color: rgba(255, 255, 255, 0.9);
+            box-shadow: rgba(42, 67, 84, 0.12) 0px 20px 40px 0px;
+        }
+
+        /* --- CONTROL PANEL & CHECKLIST --- */
+        .status-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid rgba(15, 37, 55, 0.08);
+            padding-bottom: 18px;
+            margin-bottom: 18px;
+        }
+
+        .status-title h2 {
+            font-size: 22px;
+            color: #0F2537;
+            margin-bottom: 3px;
+        }
+
+        .status-subtitle {
+            font-size: 14px;
+            color: #6E7F8E;
+        }
+
+        .security-meter {
+            display: flex;
+            flex-direction: column;
+            align-items: flex-end;
+            gap: 4px;
+        }
+
+        .security-level {
+            font-weight: 600;
+            font-size: 14px;
+        }
+
+        .security-level.vulnerable { color: #ff3b30; }
+        .security-level.moderate { color: #B45309; }
+        .security-level.secure { color: #34c759; }
+
+        .security-checklist {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 12px;
+            background: rgba(255, 255, 255, 0.3);
+            border-radius: 12px;
+            padding: 16px;
+            border: 1px solid rgba(15, 37, 55, 0.08);
+        }
+
+        @media (max-width: 768px) {
+            .security-checklist {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .checklist-item {
+            display: flex;
+            align-items: flex-start;
+            gap: 10px;
+            cursor: pointer;
+            user-select: none;
+        }
+
+        .checklist-item input {
+            margin-top: 4px;
+            accent-color: #1E5EF0;
+            cursor: pointer;
+        }
+
+        .checklist-text {
+            font-size: 14px;
+            color: #3B4E5F;
+            line-height: 1.5;
+        }
+
+        .checklist-text strong {
+            color: #0F2537;
+        }
+
+        /* --- BUTTONS (COINDUCTOR STYLE WITH DEEP NAVY PREMIUM COLOR) --- */
+        .action-container {
+            display: flex;
+            gap: 12px;
+            width: 100%;
+        }
+
+        @media (max-width: 600px) {
+            .action-container {
+                flex-direction: column;
+            }
+        }
+
+        .btn {
+            font-family: inherit;
+            font-weight: 700;
+            font-size: 15px;
+            padding: 14px 24px;
+            border: none;
+            border-radius: 10px;
+            cursor: pointer;
+            transition: background 0.2s ease, transform 0.2s ease, box-shadow 0.2s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            text-align: center;
+            flex-grow: 1;
+        }
+
+        .btn-generate {
+            background: linear-gradient(135deg, #1C344A 0%, #0F2537 100%);
+            color: #FFFFFF;
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            box-shadow: 0 4px 15px rgba(15, 37, 55, 0.2);
+        }
+
+        .btn-generate:hover {
+            background: linear-gradient(135deg, #254461 0%, #17364F 100%);
+            transform: translateY(-1px);
+            box-shadow: 0 6px 20px rgba(15, 37, 55, 0.3);
+        }
+
+        .btn-generate:active {
+            transform: scale(0.97);
+        }
+
+        .btn-secondary {
+            background-color: rgba(15, 37, 55, 0.06);
+            border: 1px solid rgba(15, 37, 55, 0.15);
+            color: #0F2537;
+            box-shadow: none;
+        }
+
+        .btn-secondary:hover {
+            background-color: rgba(15, 37, 55, 0.12);
+            border-color: rgba(15, 37, 55, 0.25);
+            transform: translateY(-1px);
+        }
+
+        .btn-print {
+            background: linear-gradient(135deg, #1C344A 0%, #0F2537 100%);
+            color: #FFFFFF;
+            display: none;
+        }
+
+        .btn-print:hover {
+            background: linear-gradient(135deg, #254461 0%, #17364F 100%);
+        }
+
+        .btn-clear {
+            background-color: rgba(255, 59, 48, 0.06);
+            color: #ff3b30;
+            border: 1px solid rgba(255, 59, 48, 0.12);
+            display: none;
+            max-width: 160px;
+        }
+
+        .btn-clear:hover {
+            background-color: rgba(255, 59, 48, 0.12);
+            transform: translateY(-1px);
+        }
+
+        @media (max-width: 600px) {
+            .btn-clear {
+                max-width: none;
+            }
+        }
+
+        /* --- DISPLAYING WALLET ON SCREEN (COINDUCTOR LIGHT CARD STYLE) --- */
+        .wallet-display-container {
+            display: none;
+            /* opacity-only fade — no transform to avoid white-layer flash */
+            opacity: 0;
+            transition: opacity 0.35s ease;
+            background: linear-gradient(135deg, #0a1628 0%, #0f2037 55%, #0d1a30 100%);
+            border: 1px solid rgba(30, 94, 240, 0.22);
+            border-radius: 20px;
+            box-shadow:
+                0 0 0 1px rgba(255,255,255,0.04) inset,
+                0 20px 60px rgba(0,0,0,0.45),
+                0 0 80px rgba(30,94,240,0.08);
+            padding: 32px;
+            transform: translateZ(0);   /* own GPU layer, pre-promoted */
+            -webkit-transform: translateZ(0);
+            position: relative;
+            overflow: hidden;
+        }
+
+        /* subtle blue glow at top */
+        .wallet-display-container::before {
+            content: '';
+            position: absolute;
+            top: -100px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 500px;
+            height: 250px;
+            background: radial-gradient(ellipse, rgba(30,94,240,0.10) 0%, transparent 70%);
+            pointer-events: none;
+            z-index: 0;
+        }
+
+        .wallet-display-container.visible {
+            opacity: 1;
+        }
+
+        /* Override .glass-card light bg for the dark wallet section */
+        .glass-card.wallet-display-container {
+            background: linear-gradient(135deg, #0a1628 0%, #0f2037 55%, #0d1a30 100%);
+            border: 1px solid rgba(30, 94, 240, 0.22);
+            box-shadow:
+                0 0 0 1px rgba(255,255,255,0.04) inset,
+                0 20px 60px rgba(0,0,0,0.45),
+                0 0 80px rgba(30,94,240,0.08);
+        }
+
+        .glass-card.wallet-display-container:hover {
+            border-color: rgba(30, 94, 240, 0.35);
+            box-shadow:
+                0 0 0 1px rgba(255,255,255,0.06) inset,
+                0 24px 64px rgba(0,0,0,0.5),
+                0 0 100px rgba(30,94,240,0.12);
+        }
+
+        .key-row {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+            width: 100%;
+            position: relative;
+            z-index: 1;
+        }
+
+        .key-label {
+            font-size: 11px;
+            text-transform: uppercase;
+            letter-spacing: 1.5px;
+            font-weight: 700;
+            color: rgba(255,255,255,0.4);
+        }
+
+        .key-label.cyan { color: #5b9cf6; }
+        .key-label.pink { color: #f97171; }
+
+        .key-data-box {
+            background: rgba(255,255,255,0.06);
+            border: 1px solid rgba(255,255,255,0.10);
+            border-radius: 12px;
+            padding: 14px 18px;
+            font-family: SFMono-Regular, Consolas, "Liberation Mono", Menlo, Courier, monospace;
+            font-size: 14px;
+            word-break: break-all;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 15px;
+            color: rgba(255,255,255,0.9);
+            transition: border-color 0.2s, background 0.2s;
+        }
+
+        .key-data-box:hover {
+            background: rgba(255,255,255,0.08);
+            border-color: rgba(30,94,240,0.3);
+        }
+
+        .key-value {
+            font-weight: 500;
+            letter-spacing: 0.3px;
+            flex-grow: 1;
+            min-width: 0;
+        }
+
+        .copy-btn {
+            background: rgba(30, 94, 240, 0.15);
+            border: 1px solid rgba(30, 94, 240, 0.3);
+            color: #7eb3ff;
+            cursor: pointer;
+            width: 40px;
+            height: 40px;
+            flex-shrink: 0;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: background 0.2s ease, border-color 0.25s ease, transform 0.15s ease;
+        }
+
+        .copy-btn:hover {
+            background: rgba(30, 94, 240, 0.28);
+            color: #aed4ff;
+            border-color: rgba(30, 94, 240, 0.55);
+        }
+
+        .copy-btn:active {
+            transform: scale(0.9);
+        }
+
+        .qr-row {
+            display: flex;
+            justify-content: center;
+            gap: 24px;
+            margin-top: 0;
+            width: 100%;
+            position: relative;
+            z-index: 2;
+        }
+
+        /* divider line between key section and QR section */
+        .qr-section-divider {
+            width: 100%;
+            height: 1px;
+            background: rgba(255,255,255,0.07);
+            position: relative;
+            z-index: 1;
+        }
+
+        .qr-panel-title {
+            font-size: 11px;
+            font-weight: 700;
+            color: rgba(255,255,255,0.35);
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            position: relative;
+            z-index: 1;
+        }
+
+        .qr-card {
+            background: rgba(255,255,255,0.04);
+            padding: 20px 16px;
+            border-radius: 16px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 12px;
+            width: 210px;
+            border: 1px solid rgba(255,255,255,0.08);
+            box-shadow:
+                0 0 0 1px rgba(30,94,240,0.1) inset,
+                0 8px 32px rgba(0,0,0,0.3);
+            transition: border-color 0.2s, box-shadow 0.2s;
+            position: relative;
+            z-index: 2;
+        }
+
+        .qr-card:hover {
+            border-color: rgba(30,94,240,0.3);
+            box-shadow:
+                0 0 0 1px rgba(30,94,240,0.2) inset,
+                0 8px 40px rgba(0,0,0,0.4),
+                0 0 20px rgba(30,94,240,0.1);
+        }
+
+        .qr-card-label {
+            font-size: 11px;
+            font-weight: 700;
+            color: rgba(255,255,255,0.5);
+            text-transform: uppercase;
+            letter-spacing: 1.5px;
+            position: relative;
+            z-index: 2;
+        }
+
+        /* QR Canvas gets white bg for scan readability — z-index above ::before glow */
+        /* Explicit dimensions prevent collapse/blank rendering in Opera Mobile on screen */
+        .qr-canvas {
+            background: #ffffff;
+            border-radius: 10px;
+            padding: 6px;
+            position: relative;
+            z-index: 2;
+            width: 192px;
+            height: 192px;
+            box-sizing: border-box;
+            flex-shrink: 0;
+            display: block;
+        }
+
+        @media screen and (max-width: 680px) {
+            .qr-row { flex-direction: column; align-items: center; gap: 16px; }
+        }
+        @media screen and (max-width: 480px) {
+            main { padding: 0 12px 24px 12px; gap: 16px; }
+            header { flex-direction: column; align-items: flex-start; gap: 12px; padding: 20px 12px 10px 12px; }
+            .glass-card { padding: 20px 16px; border-radius: 16px; gap: 16px; }
+            .status-header { flex-direction: column; align-items: flex-start; gap: 12px; padding-bottom: 12px; margin-bottom: 12px; }
+            .security-meter { align-items: flex-start; }
+            .key-data-box { padding: 12px 14px; font-size: 13px; gap: 10px; }
+            .qr-card { width: 100%; max-width: 240px; }
+            .qr-canvas { width: 160px; height: 160px; }
+            .wallet-display-container { padding: 20px 16px; }
+            .qr-dark-panel { padding: 24px 16px; }
+        }
+
+        /* --- DETAILED INSTRUCTIONS SECTION --- */
+        .instructions-container {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        .info-section h3 {
+            font-size: 20px;
+            margin-bottom: 8px;
+            color: #0F2537;
+            font-weight: 700;
+        }
+
+        .info-section p {
+            color: #5C6E7F;
+            font-size: 15px;
+            margin-bottom: 10px;
+        }
+
+        .guide-box {
+            background: rgba(255, 255, 255, 0.3);
+            border: 1px solid rgba(15, 37, 55, 0.08);
+            border-radius: 14px;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 14px;
+        }
+
+        .guide-item {
+            border-bottom: 1px solid rgba(15, 37, 55, 0.08);
+            padding-bottom: 14px;
+        }
+
+        .guide-item:last-child {
+            border-bottom: none;
+            padding-bottom: 0;
+        }
+
+        .guide-title {
+            font-weight: 700;
+            font-size: 17px;
+            color: #0F2537;
+            margin-bottom: 4px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .guide-title-num {
+            background: rgba(19, 102, 199, 0.1);
+            color: #1366C7;
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 12px;
+            font-weight: 700;
+        }
+
+        .guide-title-num.pink {
+            background: rgba(255, 59, 48, 0.1);
+            color: #ff3b30;
+        }
+
+        .guide-content {
+            font-size: 15px;
+            color: #3B4E5F;
+            padding-left: 32px;
+            line-height: 1.5;
+        }
+
+        .guide-content p {
+            margin-bottom: 6px;
+        }
+
+        .guide-content p:last-child {
+            margin-bottom: 0;
+        }
+
+        .guide-content strong {
+            color: #0F2537;
+        }
+
+        .guide-content a {
+            color: #1E5EF0;
+            text-decoration: none;
+            font-weight: 600;
+            transition: color 0.15s ease;
+        }
+
+        .guide-content a:hover {
+            color: #124CCF;
+            text-decoration: underline;
+        }
+
+        .guide-highlight {
+            color: #1366C7 !important;
+        }
+
+        .guide-warning {
+            color: #ff3b30 !important;
+        }
+
+        .alert-box {
+            background: rgba(255, 59, 48, 0.06);
+            border: 1px solid rgba(255, 59, 48, 0.12);
+            border-radius: 10px;
+            padding: 14px;
+            color: #ff3b30;
+            font-size: 14px;
+            width: 100%;
+            line-height: 1.5;
+        }
+
+        .alert-box strong {
+            color: #ff3b30;
+        }
+
+        /* --- FOOTER --- */
+        footer {
+            text-align: center;
+            padding: 30px 20px;
+            color: #6E7F8E;
+            font-size: 13px;
+            border-top: 1px solid rgba(15, 37, 55, 0.08);
+            margin-top: 30px;
+        }
+
+        /* =====================================================================
+           PRINT-SPECIFIC CSS — BI-FOLD DESIGN (A4 Portrait)
+           Fold bottom half behind top → Private key hidden inside
+           ===================================================================== */
+        @media print {
+            /* Completely remove screen UI from print rendering tree */
+            header, main, footer {
+                display: none !important;
+            }
+
+            @page {
+                size: A4 portrait;
+                margin: 0;
+            }
+
+            /* Hide everything else */
+            body > *:not(.print-container) {
+                display: none !important;
+            }
+
+            html, body {
+                background: white !important;
+                background-image: none !important;
+                color: black !important;
+                margin: 0 !important;
+                padding: 0 !important;
+                font-family: -apple-system, Helvetica, Arial, sans-serif;
+                width: 210mm !important;
+                height: 297mm !important;
+                max-height: 297mm !important;
+                overflow: hidden !important;
+            }
+
+            /* Ensure exactly 1 page print layout, absolutely positioned on the sheet */
+            .print-container {
+                display: block !important;
+                position: absolute !important;
+                top: 0 !important;
+                left: 0 !important;
+                width: 210mm !important;
+                height: 297mm !important;
+                overflow: hidden !important;
+                box-sizing: border-box !important;
+                page-break-after: avoid !important;
+                page-break-inside: avoid !important;
+                -webkit-print-color-adjust: exact;
+                print-color-adjust: exact;
+            }
+
+            /* ===== OUTER CUT BORDER ===== */
+            /* Dashed border around the entire wallet sheet for outer cut line */
+            .bifold-outer {
+                position: absolute;
+                top: 10mm;
+                left: 12mm;
+                right: 12mm;
+                bottom: 10mm;
+                border: 0.4mm dashed #999;
+                border-radius: 4mm;
+                box-sizing: border-box;
+            }
+
+            /* ===== CORNER CUT MARKS ===== */
+            .cut-tl, .cut-tr, .cut-bl, .cut-br {
+                position: absolute;
+                width: 5mm;
+                height: 5mm;
+                z-index: 20;
+            }
+            .cut-tl { top: 7mm; left: 9mm;
+                border-top: 0.4mm solid #555; border-left: 0.4mm solid #555; }
+            .cut-tr { top: 7mm; right: 9mm;
+                border-top: 0.4mm solid #555; border-right: 0.4mm solid #555; }
+            .cut-bl { bottom: 7mm; left: 9mm;
+                border-bottom: 0.4mm solid #555; border-left: 0.4mm solid #555; }
+            .cut-br { bottom: 7mm; right: 9mm;
+                border-bottom: 0.4mm solid #555; border-right: 0.4mm solid #555; }
+
+            /* ===== TOP HALF: PUBLIC ADDRESS ===== */
+            .bifold-top {
+                position: absolute;
+                top: 10mm;
+                left: 12mm;
+                right: 12mm;
+                height: 128mm;   /* roughly half A4 minus margins */
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+                justify-content: center;
+                gap: 4mm;
+                padding: 8mm 12mm 6mm 12mm;
+                box-sizing: border-box;
+            }
+
+            .bf-header {
+                width: 100%;
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                margin-bottom: 2mm;
+            }
+
+            .bf-brand {
+                font-size: 11px;
+                font-weight: 800;
+                letter-spacing: 1.5px;
+                text-transform: uppercase;
+                color: #000;
+            }
+
+            .bf-badge {
+                font-size: 8px;
+                font-weight: 700;
+                text-transform: uppercase;
+                letter-spacing: 0.8px;
+                padding: 1.5px 5px;
+                border-radius: 1.5mm;
+                border: 0.4mm solid;
+            }
+
+            .bf-badge.pub {
+                color: #1366C7;
+                border-color: #1366C7;
+            }
+
+            .bf-badge.priv {
+                color: #c0392b;
+                border-color: #c0392b;
+                background: rgba(192, 57, 43, 0.04);
+            }
+
+            /* Large QR for each section */
+            .bf-qr {
+                width: 62mm;
+                height: 62mm;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                flex-shrink: 0;
+            }
+
+            .bf-qr svg {
+                width: 62mm !important;
+                height: 62mm !important;
+            }
+
+            /* Address / Key text */
+            .bf-value-block {
+                width: 100%;
+                text-align: center;
+            }
+
+            .bf-label {
+                font-size: 7px;
+                font-weight: 700;
+                text-transform: uppercase;
+                letter-spacing: 1px;
+                margin-bottom: 1.5mm;
+            }
+
+            .bf-label.pub { color: #1366C7; }
+            .bf-label.priv { color: #c0392b; }
+
+            .bf-value {
+                font-family: SFMono-Regular, Consolas, Menlo, Courier, monospace;
+                font-size: 7.5px;
+                font-weight: 700;
+                word-break: break-all;
+                line-height: 1.55;
+                color: #111;
+            }
+
+            .bf-tip {
+                font-size: 7px;
+                color: #666;
+                line-height: 1.4;
+                text-align: center;
+                margin-top: 1mm;
+            }
+
+            /* ===== FOLD LINE (CENTER) ===== */
+            .bifold-line {
+                position: absolute;
+                top: 138mm;     /* center of A4 (297/2) + 10mm top offset ÷ 2 */
+                left: 0;
+                right: 0;
+                height: 19mm;
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+                justify-content: center;
+                gap: 1.5mm;
+            }
+
+            .bifold-line-rule {
+                width: 100%;
+                height: 0;
+                border-top: 0.5mm dashed #999;
+            }
+
+            .bifold-line-label {
+                font-size: 8.5px;
+                font-weight: 700;
+                color: #888;
+                letter-spacing: 1.5px;
+                text-transform: uppercase;
+                text-align: center;
+                padding: 0 4mm;
+                background: #fff;
+                position: relative;
+                z-index: 5;
+            }
+
+            /* ===== BOTTOM HALF: PRIVATE KEY ===== */
+            .bifold-bottom {
+                position: absolute;
+                top: 157mm;
+                left: 12mm;
+                right: 12mm;
+                bottom: 10mm;
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+                justify-content: center;
+                gap: 4mm;
+                padding: 6mm 12mm 8mm 12mm;
+                box-sizing: border-box;
+            }
+
+            /* Warning stripe across top of private key half */
+            .bf-warning-stripe {
+                width: 100%;
+                background: repeating-linear-gradient(
+                    -45deg,
+                    rgba(192, 57, 43, 0.07) 0px,
+                    rgba(192, 57, 43, 0.07) 6px,
+                    transparent 6px,
+                    transparent 12px
+                );
+                border: 0.35mm solid rgba(192, 57, 43, 0.25);
+                border-radius: 2mm;
+                padding: 2mm 4mm;
+                text-align: center;
+                font-size: 7px;
+                font-weight: 700;
+                color: #c0392b;
+                text-transform: uppercase;
+                letter-spacing: 1px;
+                flex-shrink: 0;
+            }
+
+            /* Hide old elements */
+            .print-page-title, .print-instructions-box, .print-card-row,
+            .print-card, .print-section-label, .wallet-card-container { display: none !important; }
+        }
+
+        /* Prevent print layout from appearing during normal screen view.
+           Wrapped in @media screen so @media print display:block!important wins when printing.
+           (Without @media screen wrapper, both rules have !important and the last one in
+           source order wins — which was this one, causing blank print output.) */
+        @media screen {
+            .print-container {
+                display: none !important;
+                visibility: hidden !important;
+                pointer-events: none !important;
+                position: absolute !important;
+                top: -9999px !important;
+                left: -9999px !important;
+                contain: strict;   /* isolate layout/paint/compositing from rest of page */
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- --- APP HEADER --- -->
+    <header>
+        <div class="logo-container">
+            <!-- Coinductor SVG logo embedded inline (no external requests) -->
+            <svg width="90" height="24" viewBox="0 0 97 26" fill="none" xmlns="http://www.w3.org/2000/svg" aria-label="Coinductor">
+                <path d="M89.7956 16.6585V9.00828H91.0407V10.0641C91.1789 9.83842 91.3173 9.65026 91.4556 9.49967C91.5983 9.34919 91.782 9.22964 92.0068 9.14109C92.2359 9.05254 92.545 8.99057 92.9341 8.95515C93.3231 8.9153 93.8355 8.89539 94.4709 8.89539V9.96456C93.6149 9.96456 92.9514 9.99551 92.4801 10.0575C92.0133 10.1194 91.6783 10.2258 91.475 10.3762C91.2719 10.5224 91.1487 10.726 91.1054 10.9872C91.0622 11.2484 91.0407 11.5804 91.0407 11.9834V16.6585H89.7956Z" fill="#1A2530"/>
+                <path d="M83.6419 16.8047C82.8075 16.8047 82.0986 16.7604 81.515 16.6718C80.9313 16.5878 80.4602 16.4128 80.1014 16.1472C79.7426 15.8772 79.4809 15.4743 79.3167 14.9386C79.1524 14.4029 79.0703 13.688 79.0703 12.7937C79.0703 11.9259 79.1524 11.2309 79.3167 10.7084C79.4809 10.186 79.7426 9.79205 80.1014 9.52634C80.4602 9.26074 80.9313 9.08365 81.515 8.99512C82.0986 8.90657 82.8075 8.8623 83.6419 8.8623C84.4806 8.8623 85.1896 8.90657 85.7688 8.99512C86.3524 9.08365 86.8236 9.26074 87.1825 9.52634C87.5413 9.79205 87.8028 10.186 87.9671 10.7084C88.1313 11.2309 88.2135 11.9259 88.2135 12.7937C88.2135 13.688 88.1313 14.4029 87.9671 14.9386C87.8028 15.4743 87.5413 15.8772 87.1825 16.1472C86.8236 16.4128 86.3524 16.5878 85.7688 16.6718C85.1896 16.7604 84.4806 16.8047 83.6419 16.8047ZM86.9685 12.7937C86.9685 12.1605 86.9361 11.6537 86.8712 11.2729C86.8107 10.8921 86.6746 10.6066 86.4627 10.4162C86.2509 10.2215 85.9202 10.0908 85.4706 10.0244C85.0253 9.95807 84.4158 9.9248 83.6419 9.9248C82.8724 9.9248 82.2629 9.95807 81.8133 10.0244C81.3636 10.0908 81.0329 10.2215 80.8212 10.4162C80.6093 10.6066 80.471 10.8921 80.4061 11.2729C80.3456 11.6537 80.3153 12.1605 80.3153 12.7937C80.3153 13.4489 80.3456 13.9735 80.4061 14.3675C80.471 14.7615 80.6093 15.0582 80.8212 15.2573C81.0329 15.4522 81.3636 15.5827 81.8133 15.6492C82.2629 15.7112 82.8724 15.7422 83.6419 15.7422C84.4158 15.7422 85.0253 15.7112 85.4706 15.6492C85.9202 15.5827 86.2509 15.4522 86.4627 15.2573C86.6746 15.0582 86.8107 14.7615 86.8712 14.3675C86.9361 13.9735 86.9685 13.4489 86.9685 12.7937Z" fill="#1A2530"/>
+                <path d="M74.7323 16.6587C73.9714 16.6587 73.3619 16.5813 72.9036 16.4263C72.4453 16.267 72.1125 15.9881 71.905 15.5896C71.7018 15.1867 71.6003 14.6223 71.6003 13.8962V6.91675H72.8452V9.00859H77.4429V10.0578H72.8452V13.8962C72.8452 14.392 72.8885 14.7617 72.975 15.0052C73.0658 15.2488 73.2451 15.4081 73.5131 15.4833C73.7856 15.5586 74.1919 15.5962 74.7323 15.5962C75.2122 15.5962 75.5883 15.5808 75.8606 15.5497C76.1372 15.5188 76.3405 15.4368 76.4701 15.3041C76.5998 15.1668 76.682 14.9433 76.7166 14.6333C76.7512 14.3234 76.7684 13.8874 76.7684 13.3251H77.8708C77.8708 14.06 77.8255 14.6488 77.7346 15.0916C77.6482 15.5343 77.4903 15.8685 77.2612 16.0943C77.0365 16.3201 76.7188 16.4706 76.308 16.5459C75.9017 16.6212 75.3764 16.6587 74.7323 16.6587Z" fill="#1A2530"/>
+                <path d="M65.4466 16.8047C64.6123 16.8047 63.9033 16.7604 63.3197 16.6718C62.7361 16.5878 62.2649 16.4128 61.9061 16.1472C61.5473 15.8772 61.2857 15.4743 61.1215 14.9386C60.9571 14.4029 60.8751 13.688 60.8751 12.7937C60.8751 11.9259 60.9571 11.2309 61.1215 10.7084C61.2857 10.186 61.5473 9.79205 61.9061 9.52634C62.2649 9.26074 62.7361 9.08365 63.3197 8.99512C63.9033 8.90657 64.6123 8.8623 65.4466 8.8623C66.4452 8.8623 67.2666 8.92207 67.9108 9.04161C68.5592 9.1567 69.0391 9.3958 69.3503 9.75879C69.6616 10.1219 69.8172 10.6752 69.8172 11.419H68.6241C68.6241 10.9895 68.5376 10.6686 68.3647 10.4561C68.1917 10.2436 67.8762 10.1019 67.4179 10.0311C66.9597 9.96027 66.3025 9.9248 65.4466 9.9248C64.6771 9.9248 64.0676 9.95807 63.618 10.0244C63.1684 10.0908 62.8377 10.2215 62.6259 10.4162C62.414 10.6066 62.2757 10.8921 62.2109 11.2729C62.1503 11.6537 62.1201 12.1605 62.1201 12.7937C62.1201 13.4489 62.1503 13.9735 62.2109 14.3675C62.2757 14.7615 62.414 15.0582 62.6259 15.2573C62.8377 15.4522 63.1684 15.5827 63.618 15.6492C64.0676 15.7112 64.6771 15.7422 65.4466 15.7422C66.0994 15.7422 66.6334 15.7244 67.0484 15.6891C67.4633 15.6492 67.7854 15.5739 68.0145 15.4632C68.2436 15.3481 68.4015 15.1843 68.4878 14.9718C68.5787 14.7549 68.6241 14.4671 68.6241 14.1086H69.8172C69.8172 14.7018 69.7308 15.1777 69.5579 15.5363C69.3849 15.8948 69.1212 16.165 68.7668 16.3465C68.4123 16.5279 67.9583 16.6497 67.4049 16.7117C66.8559 16.7737 66.2032 16.8047 65.4466 16.8047Z" fill="#1A2530"/>
+                <path d="M54.5333 16.8046C53.5563 16.8046 52.7868 16.696 52.2248 16.4791C51.6628 16.2578 51.2629 15.8903 51.0252 15.3769C50.7874 14.8589 50.6686 14.1527 50.6686 13.2584V9.0083H51.92V13.2584C51.92 13.7631 51.9589 14.1793 52.0368 14.5069C52.1189 14.83 52.2615 15.0824 52.4648 15.2639C52.6679 15.441 52.9532 15.565 53.3207 15.6358C53.6925 15.7067 54.1702 15.742 54.7537 15.742C55.6184 15.742 56.2971 15.669 56.79 15.5229C57.2827 15.3769 57.6307 15.1488 57.834 14.8389C58.0414 14.5245 58.1452 14.1173 58.1452 13.617V9.0083H59.3903V16.6585H58.1452V15.6425C57.9637 15.8992 57.7345 16.1139 57.4579 16.2866C57.1812 16.4592 56.8116 16.5876 56.349 16.6717C55.8864 16.7603 55.2812 16.8046 54.5333 16.8046Z" fill="#1A2530"/>
+                <path d="M44.4371 16.8047C43.6027 16.8047 42.8937 16.7604 42.3102 16.6719C41.7266 16.5878 41.2554 16.4129 40.8965 16.1472C40.5377 15.8772 40.2762 15.4744 40.1119 14.9386C39.9477 14.4029 39.8655 13.688 39.8655 12.7937C39.8655 11.9259 39.9477 11.2309 40.1119 10.7085C40.2762 10.186 40.5377 9.79207 40.8965 9.52647C41.2554 9.26075 41.7266 9.08369 42.3102 8.99515C42.8937 8.9066 43.6027 8.86233 44.4371 8.86233C45.2369 8.86233 45.9112 8.92432 46.4603 9.04827C47.0136 9.17224 47.4481 9.44891 47.7637 9.87833V6.45837H49.0088V16.6586H47.7637V15.782C47.4481 16.2159 47.0136 16.4948 46.4603 16.6187C45.9112 16.7428 45.2369 16.8047 44.4371 16.8047ZM47.7637 12.7937C47.7637 12.1606 47.7204 11.6537 47.634 11.273C47.5476 10.8922 47.3876 10.6066 47.1542 10.4162C46.9207 10.2215 46.5856 10.0908 46.149 10.0245C45.7124 9.95808 45.1417 9.92481 44.4371 9.92481C43.6676 9.92481 43.0581 9.95808 42.6084 10.0245C42.1588 10.0908 41.8281 10.2215 41.6163 10.4162C41.4044 10.6066 41.2662 10.8922 41.2013 11.273C41.1408 11.6537 41.1105 12.1606 41.1105 12.7937C41.1105 13.4489 41.1408 13.9735 41.2013 14.3676C41.2662 14.7616 41.4044 15.0582 41.6163 15.2575C41.8281 15.4522 42.1588 15.5828 42.6084 15.6492C43.0581 15.7112 43.6676 15.7422 44.4371 15.7422C45.1417 15.7422 45.7124 15.7112 46.149 15.6492C46.5856 15.5828 46.9207 15.4522 47.1542 15.2575C47.3876 15.0582 47.5476 14.7616 47.634 14.3676C47.7204 13.9735 47.7637 13.4489 47.7637 12.7937Z" fill="#1A2530"/>
+                <path d="M29.7109 16.6586V9.0084H30.956V10.0244C31.1418 9.76771 31.371 9.55289 31.6433 9.38027C31.92 9.20762 32.2874 9.07924 32.7457 8.99512C33.2083 8.90657 33.8135 8.8623 34.5614 8.8623C35.5384 8.8623 36.3079 8.9597 36.8699 9.1545C37.4362 9.34931 37.8382 9.69687 38.076 10.1971C38.3138 10.6974 38.4326 11.4057 38.4326 12.3222V16.6586H37.1812V12.3222C37.1812 11.7998 37.1379 11.3792 37.0514 11.0604C36.965 10.7417 36.8159 10.5004 36.604 10.3366C36.3965 10.1728 36.1091 10.0643 35.7416 10.0112C35.3741 9.95355 34.9072 9.9248 34.3409 9.9248C33.4763 9.9248 32.7976 9.99784 32.3047 10.144C31.812 10.2901 31.464 10.5202 31.2607 10.8346C31.0576 11.1445 30.956 11.5496 30.956 12.0498V16.6586H29.7109Z" fill="#1A2530"/>
+                <path d="M26.78 16.6586V9.43349H28.0249V16.6586H26.78ZM26.78 7.73341V6.45837H28.0249V7.73341H26.78Z" fill="#1A2530"/>
+                <path d="M1.65247 10.7975C1.65247 7.66529 1.65247 6.09922 2.24263 4.89454C2.80769 3.74112 3.74039 2.80842 4.89381 2.24336C6.09848 1.6532 7.66455 1.6532 10.7967 1.6532H15.0794C18.2115 1.6532 19.7776 1.6532 20.9824 2.24336C22.1358 2.80842 23.0684 3.74112 23.6335 4.89454C24.2237 6.09922 24.2237 7.66529 24.2237 10.7975V15.0801C24.2237 18.2123 24.2237 19.7784 23.6335 20.9831C23.0684 22.1365 22.1358 23.0691 20.9824 23.6343C19.7776 24.2244 18.2115 24.2244 15.0794 24.2244H10.7967C7.66455 24.2244 6.09848 24.2244 4.89381 23.6343C3.74039 23.0691 2.80769 22.1365 2.24263 20.9831C1.65247 19.7784 1.65247 18.2123 1.65247 15.0801V10.7975Z" fill="#1A2530"/>
+                <path d="M14.7506 12.3737C15.0702 12.3737 15.3293 12.6328 15.3293 12.9525C15.3293 13.272 15.0702 13.5311 14.7506 13.5311C14.4309 13.5311 14.1718 13.272 14.1718 12.9525C14.1718 12.6328 14.4309 12.3737 14.7506 12.3737Z" fill="white"/>
+                <path fill-rule="evenodd" clip-rule="evenodd" d="M17.135 8.97131C17.9939 8.97131 18.7199 9.01558 19.3132 9.10413C19.9109 9.19267 20.3934 9.36975 20.7609 9.63535C21.1284 9.90106 21.3962 10.2951 21.5645 10.8175C21.7327 11.3399 21.8168 12.035 21.8168 12.9028C21.8168 13.7971 21.7327 14.512 21.5645 15.0477C21.3962 15.5835 21.1284 15.9863 20.7609 16.2563C20.3934 16.5221 19.9109 16.6969 19.3132 16.781C18.7199 16.8696 17.9939 16.9138 17.135 16.9138C16.2805 16.9138 15.5544 16.8696 14.9568 16.781C14.3591 16.6969 13.8765 16.5221 13.509 16.2563C13.2829 16.0901 13.0944 15.8736 12.9437 15.6067C12.9376 15.6197 12.9315 15.6327 12.9252 15.6454C12.7481 16.0041 12.478 16.2741 12.115 16.4556C11.7519 16.6372 11.2872 16.7589 10.7204 16.8209C10.1582 16.8828 9.48965 16.9138 8.71487 16.9138C7.86042 16.9138 7.13432 16.8696 6.53664 16.781C5.93896 16.6969 5.4564 16.5221 5.08894 16.2563C4.72147 15.9863 4.45362 15.5835 4.28538 15.0477C4.11715 14.512 4.03302 13.7971 4.03302 12.9028C4.03302 12.035 4.11715 11.3399 4.28538 10.8175C4.45362 10.2951 4.72148 9.90106 5.08894 9.63535C5.4564 9.36975 5.93896 9.19267 6.53664 9.10413C7.13432 9.01558 7.86042 8.97131 8.71487 8.97131C9.73762 8.97131 10.5787 9.03109 11.2385 9.15063C11.9025 9.26576 12.394 9.50481 12.7127 9.86779C12.802 9.96947 12.8787 10.1088 12.943 10.2731C13.0938 10.0118 13.2825 9.79916 13.509 9.63535C13.8765 9.36975 14.3591 9.19267 14.9568 9.10413C15.5544 9.01558 16.2805 8.97131 17.135 8.97131ZM8.71487 10.0338C7.92683 10.0338 7.30257 10.0671 6.84213 10.1335C6.3817 10.1999 6.04301 10.3305 5.82608 10.5252C5.60915 10.7156 5.46747 11.0013 5.40105 11.382C5.33907 11.7627 5.30809 12.2697 5.30809 12.9028C5.30809 13.5579 5.33907 14.0826 5.40105 14.4767C5.46747 14.8706 5.60915 15.1673 5.82608 15.3666C6.04301 15.5613 6.38171 15.6919 6.84213 15.7583C7.30257 15.8203 7.92683 15.8513 8.71487 15.8513C9.38334 15.8513 9.93019 15.8335 10.3552 15.7982C10.7802 15.7583 11.11 15.6831 11.3447 15.5723C11.5793 15.4573 11.7409 15.2935 11.8295 15.081C11.9064 14.9015 11.9514 14.6733 11.9648 14.3968C12.0916 14.3999 12.2356 14.3999 12.3999 14.3999H14.4979C15.1629 14.3999 15.4954 14.3999 15.7019 14.1933C15.9085 13.9868 15.9086 13.6542 15.9086 12.9892V12.9169C15.9086 12.2518 15.9085 11.9194 15.7019 11.7128C15.4954 11.5061 15.1628 11.5061 14.4979 11.5061H12.3999C12.2317 11.5061 12.0847 11.5061 11.9556 11.5095C11.925 11.1355 11.8408 10.7303 11.7033 10.5651C11.5262 10.3526 11.203 10.211 10.7337 10.1401C10.2644 10.0693 9.59144 10.0338 8.71487 10.0338ZM17.135 10.0338C16.3469 10.0338 15.7226 10.0671 15.2623 10.1335C14.8018 10.1999 14.4632 10.3305 14.2462 10.5252C14.0992 10.6542 13.9869 10.827 13.909 11.0432H17.7467C18.4532 11.0432 18.8065 11.0432 19.0261 11.2628C19.2455 11.4822 19.2455 11.8356 19.2455 12.5421V13.3357C19.2455 14.0423 19.2455 14.3956 19.0261 14.615C18.8065 14.8346 18.4532 14.8346 17.7467 14.8346H13.9115C13.9892 15.0556 14.1008 15.2329 14.2462 15.3666C14.4632 15.5613 14.8018 15.6919 15.2623 15.7583C15.7226 15.8203 16.3469 15.8513 17.135 15.8513C17.9274 15.8513 18.5517 15.8203 19.0077 15.7583C19.4682 15.6919 19.8068 15.5613 20.0238 15.3666C20.2407 15.1673 20.3802 14.8706 20.4421 14.4767C20.5085 14.0826 20.5418 13.5579 20.5418 12.9028C20.5418 12.2697 20.5085 11.7627 20.4421 11.382C20.3802 11.0013 20.2407 10.7156 20.0238 10.5252C19.8068 10.3305 19.4682 10.1999 19.0077 10.1335C18.5517 10.0671 17.9274 10.0338 17.135 10.0338Z" fill="white"/>
+            </svg>
+            <div class="logo-text" style="font-size:13px; font-weight:600; color:#6E7F8E; letter-spacing:0; border-left: 1px solid rgba(15,37,55,0.15); padding-left: 10px; margin-left:4px;">Paper Wallet</div>
+        </div>
+        <div class="badge">
+            <span class="badge-dot"></span> TRON · Offline Generator
+        </div>
+    </header>
+
+    <!-- --- MAIN CONTAINER --- -->
+    <main>
+        <!-- ENVIRONMENT CHECKLIST PANEL -->
+        <section class="glass-card">
+            <div class="status-header">
+                <div class="status-title">
+                    <h2>Security Control Panel</h2>
+                    <p class="status-subtitle">Verify your browser state before key generation.</p>
+                </div>
+                <div class="security-meter">
+                    <span class="security-level vulnerable" id="security-level-indicator">🔴 Vulnerable Environment</span>
+                </div>
+            </div>
+
+            <div class="security-checklist">
+                <label class="checklist-item">
+                    <input type="checkbox" id="check-offline" onchange="updateSecurityStatus()">
+                    <span class="checklist-text">
+                        <strong>Offline State:</strong> Disconnect network cable or turn off Wi-Fi.
+                    </span>
+                </label>
+                <label class="checklist-item">
+                    <input type="checkbox" id="check-private" onchange="updateSecurityStatus()">
+                    <span class="checklist-text">
+                        <strong>Private Mode:</strong> Launch inside a Private / Incognito window.
+                    </span>
+                </label>
+                <label class="checklist-item">
+                    <input type="checkbox" id="check-printer" onchange="updateSecurityStatus()">
+                    <span class="checklist-text">
+                        <strong>Local Printer:</strong> Connect via physical USB cable (no wireless sharing).
+                    </span>
+                </label>
+            </div>
+        </section>
+
+        <!-- GENERATOR ACTIONS PANEL -->
+        <section class="glass-card generator-panel">
+            <div class="action-container">
+                <button class="btn btn-generate" onclick="generateNewWallet()">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67"/></svg>
+                    Generate TRON Wallet
+                </button>
+                <button class="btn btn-secondary btn-print" id="print-action-btn" onclick="triggerPrint()">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M6 9V2h12v7M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>
+                    Print Wallet (A4)
+                </button>
+                <button class="btn btn-clear" id="clear-action-btn" onclick="clearSession()">
+                    Clear Session
+                </button>
+            </div>
+
+            <div class="alert-box">
+                ⚠️ <strong>Never share your private key.</strong> This tool generates a TRON blockchain wallet (TRX &amp; USDT TRC-20) entirely in your browser — no data is sent to any server. Storing key pairs digitally (screenshots, cloud files, email) is highly discouraged. Keep this key offline to ensure maximum security.
+            </div>
+        </section>
+
+        <!-- INTERACTIVE SESSION STAGE (Separate Glass Card) -->
+        <section class="glass-card wallet-display-container" id="wallet-display">
+            <!-- Address Row -->
+            <div class="key-row">
+                <span class="key-label cyan">TRON Address (Public Shareable)</span>
+                <div class="key-data-box">
+                    <span class="key-value" id="address-text">Generating...</span>
+                    <button class="copy-btn" onclick="copyToClipboard('address-text', this)" aria-label="Copy Address">
+                        <svg class="copy-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+                        <svg class="check-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#30d158" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" style="display: none;"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Private Key Row -->
+            <div class="key-row">
+                <span class="key-label pink">Private Key (Strictly Secret)</span>
+                <div class="key-data-box">
+                    <span class="key-value" id="privkey-text">Generating...</span>
+                    <button class="copy-btn" onclick="copyToClipboard('privkey-text', this)" aria-label="Copy Private Key">
+                        <svg class="copy-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+                        <svg class="check-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#30d158" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" style="display: none;"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                    </button>
+                </div>
+            </div>
+
+            <!-- QR Display -->
+            <div class="qr-section-divider"></div>
+            <div class="qr-panel-title">Scan to use wallet</div>
+            <div class="qr-row">
+                <div class="qr-card">
+                    <span class="qr-card-label">Address QR</span>
+                    <canvas class="qr-canvas" id="address-canvas"></canvas>
+                </div>
+                <div class="qr-card">
+                    <span class="qr-card-label">Secret Key QR</span>
+                    <canvas class="qr-canvas" id="privkey-canvas"></canvas>
+                </div>
+            </div>
+        </section>
+
+        <!-- DETAILED GUIDELINES / INSTRUCTIONS PANEL -->
+        <section class="glass-card instructions-panel">
+            <div class="instructions-container">
+                <div class="info-section">
+                    <h3>Important Security & Usage Guide</h3>
+                    <p>Understanding the unique fee structure and activation mechanisms of the TRON network is critical to avoiding lost funds.</p>
+                </div>
+
+                <div class="guide-box">
+                    <!-- Point 1 -->
+                    <div class="guide-item">
+                        <div class="guide-title">
+                            <span class="guide-title-num">1</span> Account Activation Requirement
+                        </div>
+                        <div class="guide-content">
+                            A newly generated TRON address <strong>does not exist</strong> on the blockchain until activated. To activate it, you must send <strong>at least 1-2 TRX</strong> to it (do not send USDT directly first). Sending USDT to an inactive address may result in stalled transactions, and the balance will not display until TRX is deposited to activate the account.
+                        </div>
+                    </div>
+
+                    <!-- Point 2 -->
+                    <div class="guide-item">
+                        <div class="guide-title">
+                            <span class="guide-title-num">2</span> Withdrawal Fee Trap: Energy & Bandwidth
+                        </div>
+                        <div class="guide-content">
+                            <p>To withdraw or spend assets from this paper wallet in the future:</p>
+                            <p>• Sending <strong>TRX</strong> consumes only <strong>Bandwidth</strong>, which is extremely cheap.</p>
+                            <p>• Sending <strong>USDT (TRC-20)</strong> triggers a smart contract call, which consumes massive <strong>Energy</strong>. If the wallet does not have frozen TRX to generate Energy, the TRON network burns raw TRX as transaction fees. Currently, a single USDT transfer burns about <strong class="guide-warning">10-20 TRX</strong> in fees (depending on whether the receiver's address is active).</p>
+                            <p><strong>Recommendation:</strong> If you use this wallet for long-term USDT storage, always deposit at least <strong class="guide-highlight">20 TRX</strong> "for gas" on it. Otherwise, you will be unable to withdraw your USDT until you fund it with TRX.</p>
+                        </div>
+                    </div>
+
+                    <!-- Point 3 -->
+                    <div class="guide-item">
+                        <div class="guide-title">
+                            <span class="guide-title-num pink">3</span> How to Withdraw Funds
+                        </div>
+                        <div class="guide-content">
+                            When it is time to spend your funds, import your private key into a secure compatible wallet (e.g., <a href="https://coinductor.io" title="Coinductor Mobile Wallet"><strong>Coinductor</strong></a>, using `Import Wallet -> By Private Key`). The wallet will instantly pull your TRX and USDT balances. After this step, the imported wallet is considered <strong>"hot"</strong> (exposed to the network) and the printed paper source should <strong>never</strong> be reused for secure cold storage.
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <!-- --- FOOTER --- -->
+    <footer>
+        <p>Coinductor Paper Wallet — TRON Wallet Generator. MIT License. Open Source. &nbsp;·&nbsp; <a href="https://coinductor.io" style="color:#1E5EF0; text-decoration:none; font-weight:600;">coinductor.io</a></p>
+    </footer>
+
+
+    <!-- =====================================================================
+         PRINT LAYOUT — BI-FOLD DESIGN
+         Top half: Public Address (visible outside)
+         Bottom half: Private Key (folds behind, hidden inside)
+         ===================================================================== -->
+    <div class="print-container" id="printable-area">
+
+        <!-- Corner cut marks -->
+        <div class="cut-tl"></div>
+        <div class="cut-tr"></div>
+        <div class="cut-bl"></div>
+        <div class="cut-br"></div>
+
+        <!-- Outer dashed cut border -->
+        <div class="bifold-outer"></div>
+
+        <!-- ===== TOP HALF: PUBLIC ADDRESS ===== -->
+        <div class="bifold-top">
+            <div class="bf-header">
+                <div class="bf-brand">Coinductor · TRON Wallet</div>
+                <div class="bf-badge pub">Public Address</div>
+            </div>
+
+            <div class="bf-qr" id="print-address-qr"></div>
+
+            <div class="bf-value-block">
+                <div class="bf-label pub">Deposit Address — Safe to Share</div>
+                <div class="bf-value" id="print-address-text">—</div>
+            </div>
+
+            <div class="bf-tip">Send TRX or USDT to this address to deposit. No risk sharing this address publicly.</div>
+        </div>
+
+        <!-- ===== FOLD LINE ===== -->
+        <div class="bifold-line">
+            <div class="bifold-line-rule"></div>
+            <div class="bifold-line-label">✂ Cut outer edge · ▲ Fold this half up &amp; behind to hide Private Key · Seal with tape</div>
+            <div class="bifold-line-rule"></div>
+        </div>
+
+        <!-- ===== BOTTOM HALF: PRIVATE KEY (hidden inside when folded) ===== -->
+        <div class="bifold-bottom">
+            <div class="bf-warning-stripe">⚠ Private Key — Keep Strictly Secret — Never Share — Never Photograph</div>
+
+            <div class="bf-qr" id="print-privkey-qr"></div>
+
+            <div class="bf-value-block">
+                <div class="bf-label priv">Private Key — Import to Coinductor or TronLink to spend funds</div>
+                <div class="bf-value" id="print-privkey-text">—</div>
+            </div>
+
+            <div class="bf-header">
+                <div class="bf-brand">Coinductor · TRON Wallet</div>
+                <div class="bf-badge priv">Secret Key</div>
+            </div>
+        </div>
+
+    </div>
+
+
+
+    <!-- =====================================================================
+         JAVASCRIPT ENGINES (CRYPTO & QR GENERATION)
+         ===================================================================== -->
+    <script>
+        // =====================================================================
+        // MATHEMATICAL CRYPTOGRAPHY & QR CODE GENERATION ENGINES
+        // =====================================================================
+
+        // --- 1. SECP256K1 ELLIPTIC CURVE ARITHMETIC ---
+        // Curve Equation: y^2 = x^3 + 7 (mod SECP256K1_FIELD_PRIME)
+        const SECP256K1_FIELD_PRIME = 0xfffffffffffffffffffffffffffffffffffffffffffffffffffffffefffffc2fn;
+        const SECP256K1_GENERATOR_X = 0x79be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f81798n;
+        const SECP256K1_GENERATOR_Y = 0x483ada7726a3c4655da4fbfc0e1108a8fd17b448a68554199c47d08ffb10d4b8n;
+
+        // Custom modulo helper to correctly handle negative values in Javascript modular arithmetic
+        function modulo(value, modulus) {
+            const remainder = value % modulus;
+            return remainder < 0n ? remainder + modulus : remainder;
+        }
+
+        // Extended Euclidean Algorithm to calculate modular multiplicative inverse: (a^-1) mod modulus
+        // Input is reduced modulo modulus to a positive integer to guarantee correct result for negative values.
+        function modularInverse(value, modulus = SECP256K1_FIELD_PRIME) {
+            let positiveValue = modulo(value, modulus);
+            let tCoefficient = 0n;
+            let nextTCoefficient = 1n;
+            let remainder = modulus;
+            let nextRemainder = positiveValue;
+
+            while (nextRemainder !== 0n) {
+                const quotient = remainder / nextRemainder;
+                [tCoefficient, nextTCoefficient] = [nextTCoefficient, tCoefficient - quotient * nextTCoefficient];
+                [remainder, nextRemainder] = [nextRemainder, remainder - quotient * nextRemainder];
+            }
+
+            if (remainder > 1n) return null; // Value is not invertible if GCD is not 1
+            return tCoefficient < 0n ? tCoefficient + modulus : tCoefficient;
+        }
+
+        // Elliptic Curve Point Addition: adds two points (X1, Y1) and (X2, Y2) on the secp256k1 curve
+        function ellipticCurveAdd(point1, point2) {
+            if (!point1) return point2;
+            if (!point2) return point1;
+
+            const [x1, y1] = point1;
+            const [x2, y2] = point2;
+
+            if (x1 === x2) {
+                if (y1 === y2) {
+                    // Point Doubling: adding a point to itself (tangent slope calculation)
+                    const numerator = 3n * x1 * x1;
+                    const denominator = 2n * y1;
+                    const slope = modulo(numerator * modularInverse(denominator), SECP256K1_FIELD_PRIME);
+                    const x3 = modulo(slope * slope - 2n * x1, SECP256K1_FIELD_PRIME);
+                    const y3 = modulo(slope * (x1 - x3) - y1, SECP256K1_FIELD_PRIME);
+                    return [x3, y3];
+                } else {
+                    return null; // Point at infinity (inverse vertical cancellation)
+                }
+            } else {
+                // Point Addition: adding two distinct points (chord slope calculation)
+                const numerator = y2 - y1;
+                const denominator = x2 - x1;
+                const slope = modulo(numerator * modularInverse(denominator), SECP256K1_FIELD_PRIME);
+                const x3 = modulo(slope * slope - x1 - x2, SECP256K1_FIELD_PRIME);
+                const y3 = modulo(slope * (x1 - x3) - y1, SECP256K1_FIELD_PRIME);
+                return [x3, y3];
+            }
+        }
+
+        // Elliptic Curve Scalar Multiplication: computes scalar * basePoint using double-and-add algorithm
+        function ellipticCurveMultiply(scalar, basePoint = [SECP256K1_GENERATOR_X, SECP256K1_GENERATOR_Y]) {
+            let resultPoint = null;
+            let currentBase = basePoint;
+            let currentScalar = scalar;
+
+            while (currentScalar > 0n) {
+                if (currentScalar & 1n) {
+                    resultPoint = ellipticCurveAdd(resultPoint, currentBase);
+                }
+                currentBase = ellipticCurveAdd(currentBase, currentBase);
+                currentScalar >>= 1n;
+            }
+            return resultPoint;
+        }
+
+        // --- 2. KECCAK-256 SPONGE HASHING ENGINE ---
+        // Keccak-f[1600] permutation round constants
+        const KECCAK_ROUND_CONSTANTS = [
+            0x0000000000000001n, 0x0000000000008082n, 0x800000000000808an, 0x8000000080008000n,
+            0x000000000000808bn, 0x0000000080000001n, 0x8000000080008081n, 0x8000000000008009n,
+            0x000000000000008an, 0x0000000000000088n, 0x0000000080008009n, 0x000000008000000an,
+            0x000000008000808bn, 0x800000000000008bn, 0x8000000000008089n, 0x8000000000008003n,
+            0x8000000000008002n, 0x8000000000000080n, 0x000000000000800an, 0x800000008000000an,
+            0x8000000080008081n, 0x8000000000008080n, 0x0000000080000001n, 0x8000000080008008n
+        ];
+
+        // Keccak-f[1600] rotation offset matrix
+        const KECCAK_ROTATION_OFFSETS = [
+            [0, 36, 3, 41, 18],
+            [1, 44, 10, 45, 2],
+            [62, 6, 43, 15, 61],
+            [28, 55, 25, 21, 56],
+            [27, 20, 39, 8, 14]
+        ];
+
+        // Core Keccak-f[1600] permutation function (24 rounds over 25 64-bit state words)
+        function keccakPermutationF(stateWords) {
+            for (let round = 0; round < 24; round++) {
+                // Theta Step (θ): Parity computation and mixing
+                const C_checksum = new Array(5);
+                for (let x = 0; x < 5; x++) {
+                    C_checksum[x] = stateWords[x] ^ stateWords[x + 5] ^ stateWords[x + 10] ^ stateWords[x + 15] ^ stateWords[x + 20];
+                }
+                const D_checksum = new Array(5);
+                for (let x = 0; x < 5; x++) {
+                    const leftWord = C_checksum[(x + 4) % 5];
+                    const rightWord = C_checksum[(x + 1) % 5];
+                    const rotatedRight = ((rightWord << 1n) & 0xffffffffffffffffn) | (rightWord >> 63n);
+                    D_checksum[x] = leftWord ^ rotatedRight;
+                }
+                for (let x = 0; x < 5; x++) {
+                    for (let y = 0; y < 5; y++) {
+                        stateWords[x + y * 5] ^= D_checksum[x];
+                    }
+                }
+
+                // Rho (ρ) and Pi (π) Steps: Inter-lane translation and intra-lane bit rotation
+                let nextStateWords = new Array(25).fill(0n);
+                for (let x = 0; x < 5; x++) {
+                    for (let y = 0; y < 5; y++) {
+                        const rotationOffset = BigInt(KECCAK_ROTATION_OFFSETS[x][y]);
+                        const cellValue = stateWords[x + y * 5];
+                        const rotatedValue = rotationOffset === 0n ? cellValue : (((cellValue << rotationOffset) & 0xffffffffffffffffn) | (cellValue >> (64n - rotationOffset)));
+                        nextStateWords[y + ((2 * x + 3 * y) % 5) * 5] = rotatedValue;
+                    }
+                }
+
+                // Chi Step (χ): Non-linear combination along columns
+                stateWords = nextStateWords;
+                nextStateWords = new Array(25);
+                for (let x = 0; x < 5; x++) {
+                    for (let y = 0; y < 5; y++) {
+                        const a_cell = stateWords[x + y * 5];
+                        const b_cell = stateWords[((x + 1) % 5) + y * 5];
+                        const c_cell = stateWords[((x + 2) % 5) + y * 5];
+                        nextStateWords[x + y * 5] = a_cell ^ ((~b_cell) & c_cell);
+                    }
+                }
+
+                // Iota Step (ι): Round constant mixing on cell (0,0)
+                stateWords = nextStateWords;
+                stateWords[0] ^= KECCAK_ROUND_CONSTANTS[round];
+            }
+            return stateWords;
+        }
+
+        // Keccak-256 hashing entrypoint (takes Uint8Array and returns Uint8Array of length 32)
+        function computeKeccak256(messageBytes) {
+            const rateBytes = 136; // Keccak-256 rate is 1088 bits = 136 bytes
+            const paddingLength = rateBytes - (messageBytes.length % rateBytes);
+            const paddedBytes = new Uint8Array(messageBytes.length + paddingLength);
+            
+            paddedBytes.set(messageBytes);
+            paddedBytes[messageBytes.length] = 0x01; // Pad message with 0x01 prefix bit pattern (little-endian byte ordering)
+            paddedBytes[paddedBytes.length - 1] |= 0x80; // Set final bit for pad10*1 sponge rule
+
+            let stateWords = new Array(25).fill(0n);
+            
+            // Absorb blocks of 136 bytes into the sponge state
+            for (let blockOffset = 0; blockOffset < paddedBytes.length; blockOffset += rateBytes) {
+                for (let wordIndex = 0; wordIndex < 17; wordIndex++) {
+                    let wordValue = 0n;
+                    for (let byteIndex = 0; byteIndex < 8; byteIndex++) {
+                        wordValue |= BigInt(paddedBytes[blockOffset + wordIndex * 8 + byteIndex]) << BigInt(byteIndex * 8);
+                    }
+                    stateWords[wordIndex] ^= wordValue;
+                }
+                stateWords = keccakPermutationF(stateWords);
+            }
+
+            // Squeeze first 32 bytes from state
+            const outputHashBytes = new Uint8Array(32);
+            for (let byteIndex = 0; byteIndex < 32; byteIndex++) {
+                const laneIndex = Math.floor(byteIndex / 8);
+                const bitShift = BigInt((byteIndex % 8) * 8);
+                outputHashBytes[byteIndex] = Number((stateWords[laneIndex] >> bitShift) & 0xffn);
+            }
+            return outputHashBytes;
+        }
+
+        // --- 3. SHA-256 HASHING ENGINE ---
+        // Computes standard SHA-256 hash (takes Uint8Array and returns Uint8Array of length 32)
+        function computeSha256(messageBytes) {
+            // Initial hash values (first 32 bits of the fractional parts of the square roots of the first 8 primes)
+            let h0 = 0x6a09e667, h1 = 0xbb67ae85, h2 = 0x3c6ef372, h3 = 0xa54ff53a;
+            let h4 = 0x510e527f, h5 = 0x9b05688c, h6 = 0x1f83d9ab, h7 = 0x5be0cd19;
+
+            // SHA-256 round constants (first 32 bits of the fractional parts of the cube roots of the first 64 primes)
+            const roundConstants = [
+                0x428a2f98, 0x71374491, 0xb5c0fbcf, 0xe9b5dba5, 0x3956c25b, 0x59f111f1, 0x923f82a4, 0xab1c5ed5,
+                0xd807aa98, 0x12835b01, 0x243185be, 0x550c7dc3, 0x72be5d74, 0x80deb1fe, 0x9bdc06a7, 0xc19bf174,
+                0xe49b69c1, 0xefbe4786, 0x0fc19dc6, 0x240ca1cc, 0x2de92c6f, 0x4a7484aa, 0x5cb0a9dc, 0x76f988da,
+                0x983e5152, 0xa831c66d, 0xb00327c8, 0xbf597fc7, 0xc6e00bf3, 0xd5a79147, 0x06ca6351, 0x14292967,
+                0x27b70a85, 0x2e1b2138, 0x4d2c6dfc, 0x53380d13, 0x650a7354, 0x766a0abb, 0x81c2c92e, 0x92722c85,
+                0xa2bfe8a1, 0xa81a664b, 0xc24b8b70, 0xc76c51a3, 0xd192e819, 0xd6990624, 0xf40e3585, 0x106aa070,
+                0x19a4c116, 0x1e376c08, 0x2748774c, 0x34b0bcb5, 0x391c0cb3, 0x4ed8aa4a, 0x5b9cca4f, 0x682e6ff3,
+                0x748f82ee, 0x78a5636f, 0x84c87814, 0x8cc70208, 0x90befffa, 0xa4506ceb, 0xbef9a3f7, 0xc67178f2
+            ];
+
+            const messageLength = messageBytes.length;
+            const bitLength = messageLength * 8;
+            const paddingLength = (messageLength % 64 < 56) ? 64 - (messageLength % 64) : 128 - (messageLength % 64);
+            const paddedBytes = new Uint8Array(messageLength + paddingLength);
+            
+            paddedBytes.set(messageBytes);
+            paddedBytes[messageLength] = 0x80; // Append single 1-bit followed by zeros
+            
+            // Set 64-bit length in big endian at the end of the block
+            const dataView = new DataView(paddedBytes.buffer);
+            dataView.setUint32(paddedBytes.length - 4, bitLength & 0xffffffff);
+            if (bitLength > 0xffffffff) {
+                dataView.setUint32(paddedBytes.length - 8, Math.floor(bitLength / 0x100000000));
+            }
+
+            const messageScheduleWords = new Uint32Array(64);
+            
+            // Process in 512-bit blocks (64 bytes)
+            for (let blockOffset = 0; blockOffset < paddedBytes.length; blockOffset += 64) {
+                for (let i = 0; i < 16; i++) {
+                    messageScheduleWords[i] = dataView.getUint32(blockOffset + i * 4);
+                }
+                for (let i = 16; i < 64; i++) {
+                    const sigma0 = (messageScheduleWords[i-15] >>> 7 | messageScheduleWords[i-15] << 25) ^ 
+                                   (messageScheduleWords[i-15] >>> 18 | messageScheduleWords[i-15] << 14) ^ 
+                                   (messageScheduleWords[i-15] >>> 3);
+                    const sigma1 = (messageScheduleWords[i-2] >>> 17 | messageScheduleWords[i-2] << 15) ^ 
+                                   (messageScheduleWords[i-2] >>> 19 | messageScheduleWords[i-2] << 13) ^ 
+                                   (messageScheduleWords[i-2] >>> 10);
+                    messageScheduleWords[i] = (messageScheduleWords[i-16] + sigma0 + messageScheduleWords[i-7] + sigma1) | 0;
+                }
+
+                // Initialize working variables with current hash values
+                let a = h0, b = h1, c = h2, d = h3, e = h4, f = h5, g = h6, h = h7;
+
+                // Compression loop
+                for (let i = 0; i < 64; i++) {
+                    const capSigma1 = (e >>> 6 | e << 26) ^ (e >>> 11 | e << 21) ^ (e >>> 25 | e << 7);
+                    const choose = (e & f) ^ (~e & g);
+                    const temp1 = (h + capSigma1 + choose + roundConstants[i] + messageScheduleWords[i]) | 0;
+                    
+                    const capSigma0 = (a >>> 2 | a << 30) ^ (a >>> 13 | a << 19) ^ (a >>> 22 | a << 10);
+                    const majority = (a & b) ^ (a & c) ^ (b & c);
+                    const temp2 = (capSigma0 + majority) | 0;
+
+                    h = g;
+                    g = f;
+                    f = e;
+                    e = (d + temp1) | 0;
+                    d = c;
+                    c = b;
+                    b = a;
+                    a = (temp1 + temp2) | 0;
+                }
+
+                // Add compressed block values to the running hash state registers
+                h0 = (h0 + a) | 0; h1 = (h1 + b) | 0; h2 = (h2 + c) | 0; h3 = (h3 + d) | 0;
+                h4 = (h4 + e) | 0; h5 = (h5 + f) | 0; h6 = (h6 + g) | 0; h7 = (h7 + h) | 0;
+            }
+
+            const outputHashBytes = new Uint8Array(32);
+            const outputView = new DataView(outputHashBytes.buffer);
+            outputView.setUint32(0, h0); outputView.setUint32(4, h1); outputView.setUint32(8, h2); outputView.setUint32(12, h3);
+            outputView.setUint32(16, h4); outputView.setUint32(20, h5); outputView.setUint32(24, h6); outputView.setUint32(28, h7);
+            return outputHashBytes;
+        }
+
+        // --- 4. BASE58 ENCODING ENGINE ---
+        // Encodes a byte buffer into Base58 representation (used in TRON Base58Check)
+        function encodeBase58(inputBuffer) {
+            const BASE58_ALPHABET = '123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz';
+            let digits = [0];
+
+            for (let i = 0; i < inputBuffer.length; i++) {
+                let carryValue = inputBuffer[i];
+                for (let j = 0; j < digits.length; j++) {
+                    carryValue += digits[j] * 256;
+                    digits[j] = carryValue % 58;
+                    carryValue = Math.floor(carryValue / 58);
+                }
+                while (carryValue > 0) {
+                    digits.push(carryValue % 58);
+                    carryValue = Math.floor(carryValue / 58);
+                }
+            }
+
+            // Count leading zero bytes to prepend corresponding '1' symbols for proper leading zeros padding
+            let leadingZerosCount = 0;
+            for (let i = 0; i < inputBuffer.length && inputBuffer[i] === 0; i++) {
+                leadingZerosCount++;
+            }
+
+            let resultString = '';
+            for (let i = 0; i < leadingZerosCount; i++) {
+                resultString += BASE58_ALPHABET[0];
+            }
+            for (let i = digits.length - 1; i >= 0; i--) {
+                resultString += BASE58_ALPHABET[digits[i]];
+            }
+            return resultString;
+        }
+
+
+        // --- 5. TIGHTLY BUNDLED QR CODE GENERATOR (BYTE-MODE ONLY) ---
+        // Self-contained implementation of Kazuhiko Arase's QR Code model for plain ASCII bytes
+        const qrcode = (function() {
+            const QR_ENCODING_MODES = { MODE_8BIT_BYTE : 1 << 2 };
+            const QR_ERROR_CORRECTION_LEVELS = { L : 1, M : 0, Q : 3, H : 2 };
+            const QR_MASK_PATTERNS = { PATTERN000 : 0, PATTERN001 : 1, PATTERN010 : 2, PATTERN011 : 3, PATTERN100 : 4, PATTERN101 : 5, PATTERN110 : 6, PATTERN111 : 7 };
+
+            const QRUtils = (function() {
+                const PATTERN_POSITION_TABLE = [
+                    [], [6, 18], [6, 22], [6, 26], [6, 30], [6, 34], [6, 22, 38], [6, 24, 42], [6, 26, 46], [6, 28, 50],
+                    [6, 30, 54], [6, 32, 58], [6, 34, 62], [6, 26, 46, 66], [6, 26, 48, 70], [6, 26, 50, 74], [6, 30, 54, 78],
+                    [6, 30, 56, 82], [6, 30, 58, 86], [6, 34, 62, 90], [6, 28, 50, 72, 94], [6, 26, 50, 74, 98], [6, 30, 54, 78, 102],
+                    [6, 28, 54, 80, 106], [6, 32, 58, 84, 110], [6, 30, 58, 86, 114], [6, 34, 62, 90, 118], [6, 26, 50, 74, 98, 122],
+                    [6, 30, 54, 78, 102, 126], [6, 26, 52, 78, 104, 130], [6, 30, 56, 82, 108, 134], [6, 34, 60, 86, 112, 138],
+                    [6, 30, 58, 86, 114, 142], [6, 34, 62, 90, 118, 146], [6, 30, 54, 78, 102, 126, 150], [6, 24, 50, 76, 102, 128, 154],
+                    [6, 28, 54, 80, 106, 132, 158], [6, 32, 58, 84, 110, 136, 162], [6, 26, 54, 82, 110, 138, 166], [6, 30, 58, 86, 114, 142, 170]
+                ];
+                const G15 = (1 << 10) | (1 << 8) | (1 << 5) | (1 << 4) | (1 << 2) | (1 << 1) | (1 << 0);
+                const G18 = (1 << 12) | (1 << 11) | (1 << 10) | (1 << 9) | (1 << 8) | (1 << 5) | (1 << 2) | (1 << 0);
+                const G15_MASK = (1 << 14) | (1 << 12) | (1 << 10) | (1 << 4) | (1 << 1);
+
+                const utilsObject = {};
+
+                const getBCHDigit = function(data) {
+                    let digit = 0;
+                    while (data != 0) { digit += 1; data >>>= 1; }
+                    return digit;
+                };
+
+                utilsObject.getBCHTypeInfo = function(data) {
+                    let d = data << 10;
+                    while (getBCHDigit(d) - getBCHDigit(G15) >= 0) {
+                        d ^= (G15 << (getBCHDigit(d) - getBCHDigit(G15) ) );
+                    }
+                    return ( (data << 10) | d) ^ G15_MASK;
+                };
+
+                utilsObject.getBCHTypeNumber = function(data) {
+                    let d = data << 12;
+                    while (getBCHDigit(d) - getBCHDigit(G18) >= 0) {
+                        d ^= (G18 << (getBCHDigit(d) - getBCHDigit(G18) ) );
+                    }
+                    return (data << 12) | d;
+                };
+
+                utilsObject.getPatternPosition = function(typeNumber) {
+                    return PATTERN_POSITION_TABLE[typeNumber - 1];
+                };
+
+                utilsObject.getMaskFunction = function(maskPattern) {
+                    switch (maskPattern) {
+                        case QR_MASK_PATTERNS.PATTERN000 : return function(i, j) { return (i + j) % 2 == 0; };
+                        case QR_MASK_PATTERNS.PATTERN001 : return function(i, j) { return i % 2 == 0; };
+                        case QR_MASK_PATTERNS.PATTERN010 : return function(i, j) { return j % 3 == 0; };
+                        case QR_MASK_PATTERNS.PATTERN011 : return function(i, j) { return (i + j) % 3 == 0; };
+                        case QR_MASK_PATTERNS.PATTERN100 : return function(i, j) { return (Math.floor(i / 2) + Math.floor(j / 3) ) % 2 == 0; };
+                        case QR_MASK_PATTERNS.PATTERN101 : return function(i, j) { return (i * j) % 2 + (i * j) % 3 == 0; };
+                        case QR_MASK_PATTERNS.PATTERN110 : return function(i, j) { return ( (i * j) % 2 + (i * j) % 3) % 2 == 0; };
+                        case QR_MASK_PATTERNS.PATTERN111 : return function(i, j) { return ( (i * j) % 3 + (i + j) % 2) % 2 == 0; };
+                        default : throw 'Invalid mask pattern: ' + maskPattern;
+                    }
+                };
+
+                utilsObject.getErrorCorrectPolynomial = function(errorCorrectLength) {
+                    let a = createGaloisFieldPolynomial([1], 0);
+                    for (let i = 0; i < errorCorrectLength; i += 1) {
+                        a = a.multiply(createGaloisFieldPolynomial([1, QRGaloisFieldMath.gexp(i)], 0) );
+                    }
+                    return a;
+                };
+
+                utilsObject.getLengthInBits = function(mode, type) {
+                    if (1 <= type && type < 10) return 8; // byte mode length indicator fits in 8 bits
+                    else if (type < 27) return 16;
+                    else if (type < 41) return 16;
+                    else throw 'Unsupported version type: ' + type;
+                };
+
+                utilsObject.getLostPoint = function(qrcode) {
+                    const moduleCount = qrcode.getModuleCount();
+                    let lostPoint = 0;
+
+                    // Condition 1: Same color in adjacent modules
+                    for (let row = 0; row < moduleCount; row += 1) {
+                        for (let col = 0; col < moduleCount; col += 1) {
+                            let sameColorAdjacentCount = 0;
+                            const isDarkValue = qrcode.isDark(row, col);
+                            for (let r = -1; r <= 1; r += 1) {
+                                if (row + r < 0 || moduleCount <= row + r) continue;
+                                for (let c = -1; c <= 1; c += 1) {
+                                    if (col + c < 0 || moduleCount <= col + c) continue;
+                                    if (r == 0 && c == 0) continue;
+                                    if (isDarkValue === qrcode.isDark(row + r, col + c) ) sameColorAdjacentCount += 1;
+                                }
+                            }
+                            if (sameColorAdjacentCount > 5) lostPoint += (3 + sameColorAdjacentCount - 5);
+                        }
+                    }
+
+                    // Condition 2: 2x2 blocks of same color
+                    for (let row = 0; row < moduleCount - 1; row += 1) {
+                        for (let col = 0; col < moduleCount - 1; col += 1) {
+                            let blockColorCount = 0;
+                            if (qrcode.isDark(row, col) ) blockColorCount += 1;
+                            if (qrcode.isDark(row + 1, col) ) blockColorCount += 1;
+                            if (qrcode.isDark(row, col + 1) ) blockColorCount += 1;
+                            if (qrcode.isDark(row + 1, col + 1) ) blockColorCount += 1;
+                            if (blockColorCount === 0 || blockColorCount === 4) lostPoint += 3;
+                        }
+                    }
+
+                    // Condition 3: Specific visual pattern matching (1:1:3:1:1 pattern matching finder patterns)
+                    for (let row = 0; row < moduleCount; row += 1) {
+                        for (let col = 0; col < moduleCount - 6; col += 1) {
+                            if (qrcode.isDark(row, col) && !qrcode.isDark(row, col + 1) && qrcode.isDark(row, col + 2) && qrcode.isDark(row, col + 3) && qrcode.isDark(row, col + 4) && !qrcode.isDark(row, col + 5) && qrcode.isDark(row, col + 6) ) lostPoint += 40;
+                        }
+                    }
+                    for (let col = 0; col < moduleCount; col += 1) {
+                        for (let row = 0; row < moduleCount - 6; row += 1) {
+                            if (qrcode.isDark(row, col) && !qrcode.isDark(row + 1, col) && qrcode.isDark(row + 2, col) && qrcode.isDark(row + 3, col) && qrcode.isDark(row + 4, col) && !qrcode.isDark(row + 5, col) && qrcode.isDark(row + 6, col) ) lostPoint += 40;
+                        }
+                    }
+
+                    // Condition 4: Ratio of dark to light modules
+                    let darkModulesCount = 0;
+                    for (let col = 0; col < moduleCount; col += 1) {
+                        for (let row = 0; row < moduleCount; row += 1) {
+                            if (qrcode.isDark(row, col) ) darkModulesCount += 1;
+                        }
+                    }
+                    const darkRatio = Math.abs(100 * darkModulesCount / moduleCount / moduleCount - 50) / 5;
+                    lostPoint += darkRatio * 10;
+                    return lostPoint;
+                };
+
+                return utilsObject;
+            })();
+
+            // Galois Field math helper objects (exponential and log tables)
+            const QRGaloisFieldMath = (function() {
+                const EXP_TABLE = new Array(256);
+                const LOG_TABLE = new Array(256);
+                for (let i = 0; i < 8; i += 1) EXP_TABLE[i] = 1 << i;
+                for (let i = 8; i < 256; i += 1) EXP_TABLE[i] = EXP_TABLE[i - 4] ^ EXP_TABLE[i - 5] ^ EXP_TABLE[i - 6] ^ EXP_TABLE[i - 8];
+                for (let i = 0; i < 255; i += 1) LOG_TABLE[EXP_TABLE[i] ] = i;
+                
+                const mathObject = {};
+                mathObject.glog = function(n) { if (n < 1) throw 'glog(' + n + ') value error'; return LOG_TABLE[n]; };
+                mathObject.gexp = function(n) {
+                    while (n < 0) n += 255;
+                    while (n >= 256) n -= 255;
+                    return EXP_TABLE[n];
+                };
+                return mathObject;
+            })();
+
+            // Representation of polynomials in GF(2^8)
+            function createGaloisFieldPolynomial(coefficientsArray, degreeShift) {
+                if (typeof coefficientsArray.length === 'undefined') throw 'GF Polynomial initialization array error';
+                const coefficients = (function() {
+                    let offset = 0;
+                    while (offset < coefficientsArray.length && coefficientsArray[offset] === 0) offset += 1;
+                    const truncatedCoefficients = new Array(coefficientsArray.length - offset + degreeShift);
+                    for (let i = 0; i < coefficientsArray.length - offset; i += 1) truncatedCoefficients[i] = coefficientsArray[i + offset];
+                    return truncatedCoefficients;
+                })();
+
+                const polynomialObject = {};
+                polynomialObject.getAt = function(index) { return coefficients[index]; };
+                polynomialObject.getLength = function() { return coefficients.length; };
+                
+                polynomialObject.multiply = function(multiplierPolynomial) {
+                    const resultCoefficients = new Array(polynomialObject.getLength() + multiplierPolynomial.getLength() - 1);
+                    for (let i = 0; i < polynomialObject.getLength(); i += 1) {
+                        for (let j = 0; j < multiplierPolynomial.getLength(); j += 1) {
+                            resultCoefficients[i + j] ^= QRGaloisFieldMath.gexp(QRGaloisFieldMath.glog(polynomialObject.getAt(i) ) + QRGaloisFieldMath.glog(multiplierPolynomial.getAt(j) ) );
+                        }
+                    }
+                    return createGaloisFieldPolynomial(resultCoefficients, 0);
+                };
+
+                polynomialObject.mod = function(divisorPolynomial) {
+                    if (polynomialObject.getLength() - divisorPolynomial.getLength() < 0) return polynomialObject;
+                    const quotientRatio = QRGaloisFieldMath.glog(polynomialObject.getAt(0) ) - QRGaloisFieldMath.glog(divisorPolynomial.getAt(0) );
+                    const remainderCoefficients = new Array(polynomialObject.getLength()).fill(0);
+                    for (let i = 0; i < polynomialObject.getLength(); i += 1) remainderCoefficients[i] = polynomialObject.getAt(i);
+                    for (let i = 0; i < divisorPolynomial.getLength(); i += 1) {
+                        remainderCoefficients[i] ^= QRGaloisFieldMath.gexp(QRGaloisFieldMath.glog(divisorPolynomial.getAt(i)) + quotientRatio);
+                    }
+                    return createGaloisFieldPolynomial(remainderCoefficients, 0).mod(divisorPolynomial);
+                };
+                
+                return polynomialObject;
+            }
+
+            // Reed Solomon Block parameters
+            const QRReedSolomonBlock = (function() {
+                const RS_BLOCK_TABLE = [
+                    [1, 26, 19], [1, 26, 16], [1, 26, 13], [1, 26, 9], // Version 1
+                    [1, 44, 34], [1, 44, 28], [1, 44, 22], [1, 44, 16], // Version 2
+                    [1, 70, 55], [1, 70, 44], [2, 35, 17], [2, 35, 13], // Version 3
+                    [1, 100, 80], [2, 50, 32], [2, 50, 24], [4, 25, 9], // Version 4
+                    [1, 134, 108], [2, 67, 43], [2, 33, 15, 2, 34, 16], [2, 33, 11, 2, 34, 12], // Version 5
+                    [2, 86, 68], [4, 43, 27], [4, 43, 19], [4, 43, 15], // Version 6
+                    [2, 98, 78], [4, 49, 31], [2, 32, 14, 4, 33, 15], [4, 39, 13, 1, 40, 14], // Version 7
+                    [2, 121, 97], [2, 60, 38, 2, 61, 39], [4, 40, 18, 2, 41, 19], [4, 40, 14, 2, 41, 15] // Version 8
+                ];
+                
+                const createRSBlock = function(totalCount, dataCount) {
+                    const blockObj = {}; blockObj.totalCount = totalCount; blockObj.dataCount = dataCount; return blockObj;
+                };
+                
+                const rsBlockManager = {};
+                rsBlockManager.getRSBlocks = function(typeNumber, errorCorrectionLevel) {
+                    let rsBlockConfig;
+                    switch(errorCorrectionLevel) {
+                        case QR_ERROR_CORRECTION_LEVELS.L : rsBlockConfig = RS_BLOCK_TABLE[(typeNumber - 1) * 4 + 0]; break;
+                        case QR_ERROR_CORRECTION_LEVELS.M : rsBlockConfig = RS_BLOCK_TABLE[(typeNumber - 1) * 4 + 1]; break;
+                        case QR_ERROR_CORRECTION_LEVELS.Q : rsBlockConfig = RS_BLOCK_TABLE[(typeNumber - 1) * 4 + 2]; break;
+                        case QR_ERROR_CORRECTION_LEVELS.H : rsBlockConfig = RS_BLOCK_TABLE[(typeNumber - 1) * 4 + 3]; break;
+                        default : return undefined;
+                    }
+                    if (typeof rsBlockConfig === 'undefined') throw 'Invalid RS block table index';
+                    const listCount = rsBlockConfig.length / 3;
+                    const blocksList = [];
+                    for (let i = 0; i < listCount; i += 1) {
+                        const count = rsBlockConfig[i * 3 + 0];
+                        const totalCount = rsBlockConfig[i * 3 + 1];
+                        const dataCount = rsBlockConfig[i * 3 + 2];
+                        for (let j = 0; j < count; j += 1) blocksList.push(createRSBlock(totalCount, dataCount) );
+                    }
+                    return blocksList;
+                };
+                return rsBlockManager;
+            })();
+
+            // Bit stream writing helper
+            const createBitBuffer = function() {
+                const innerBuffer = []; 
+                let innerBitLength = 0;
+                const bufferObj = {};
+                
+                bufferObj.getBuffer = function() { return innerBuffer; };
+                bufferObj.put = function(numberValue, lengthInBits) {
+                    for (let i = 0; i < lengthInBits; i += 1) {
+                        bufferObj.putBit( ( (numberValue >>> (lengthInBits - i - 1) ) & 1) === 1);
+                    }
+                };
+                bufferObj.getLengthInBits = function() { return innerBitLength; };
+                bufferObj.putBit = function(bitState) {
+                    const byteIndex = Math.floor(innerBitLength / 8);
+                    if (innerBuffer.length <= byteIndex) innerBuffer.push(0);
+                    if (bitState) innerBuffer[byteIndex] |= (0x80 >>> (innerBitLength % 8) );
+                    innerBitLength += 1;
+                };
+                return bufferObj;
+            };
+
+            // Byte segment encoder (enforce plain ASCII characters)
+            const create8BitByteSegment = function(dataString) {
+                const modeValue = QR_ENCODING_MODES.MODE_8BIT_BYTE;
+                const encodedBytes = [];
+                for (let i = 0; i < dataString.length; i++) {
+                    encodedBytes.push(dataString.charCodeAt(i) & 0xff);
+                }
+                const segmentObj = {};
+                segmentObj.getMode = function() { return modeValue; };
+                segmentObj.getLength = function(buffer) { return encodedBytes.length; };
+                segmentObj.write = function(bitBuffer) {
+                    for (let i = 0; i < encodedBytes.length; i += 1) bitBuffer.put(encodedBytes[i], 8);
+                };
+                return segmentObj;
+            };
+
+            // Main QR code object construction closure
+            const generateQRCode = function(typeNumber, errorCorrectionLevel) {
+                const PAD0 = 0xEC;
+                const PAD1 = 0x11;
+                let qrTypeNumber = typeNumber;
+                const qrErrorCorrectionLevel = QR_ERROR_CORRECTION_LEVELS[errorCorrectionLevel];
+                let qrGridModules = null;
+                let qrGridModuleCount = 0;
+                let qrDataCache = null;
+                const qrDataSegmentsList = [];
+                const qrSelfObject = {};
+
+                const initializeGridMatrix = function(testMode, maskPattern) {
+                    qrGridModuleCount = qrTypeNumber * 4 + 17;
+                    qrGridModules = (function(moduleCount) {
+                        const matrix = new Array(moduleCount);
+                        for (let row = 0; row < moduleCount; row += 1) {
+                            matrix[row] = new Array(moduleCount);
+                            for (let col = 0; col < moduleCount; col += 1) matrix[row][col] = null;
+                        }
+                        return matrix;
+                    })(qrGridModuleCount);
+
+                    setupPositionProbePattern(0, 0);
+                    setupPositionProbePattern(qrGridModuleCount - 7, 0);
+                    setupPositionProbePattern(0, qrGridModuleCount - 7);
+                    setupPositionAdjustPattern();
+                    setupTimingPattern();
+                    setupTypeInfo(testMode, maskPattern);
+                    if (qrTypeNumber >= 7) setupTypeNumber(testMode);
+                    if (qrDataCache == null) qrDataCache = compileFinalDataCodewords(qrTypeNumber, qrErrorCorrectionLevel, qrDataSegmentsList);
+                    mapDataCodewordsToGrid(qrDataCache, maskPattern);
+                };
+
+                const setupPositionProbePattern = function(row, col) {
+                    for (let r = -1; r <= 7; r += 1) {
+                        if (row + r <= -1 || qrGridModuleCount <= row + r) continue;
+                        for (let c = -1; c <= 7; c += 1) {
+                            if (col + c <= -1 || qrGridModuleCount <= col + c) continue;
+                            if ( (0 <= r && r <= 6 && (c == 0 || c == 6) ) || (0 <= c && c <= 6 && (r == 0 || r == 6) ) || (2 <= r && r <= 4 && 2 <= c && c <= 4) ) {
+                                qrGridModules[row + r][col + c] = true;
+                            } else {
+                                qrGridModules[row + r][col + c] = false;
+                            }
+                        }
+                    }
+                };
+
+                const chooseBestMaskPattern = function() {
+                    let minPenaltyScore = 0; 
+                    let bestPatternIndex = 0;
+                    for (let i = 0; i < 8; i += 1) {
+                        initializeGridMatrix(true, i);
+                        const penaltyScore = QRUtils.getLostPoint(qrSelfObject);
+                        if (i === 0 || minPenaltyScore > penaltyScore) { 
+                            minPenaltyScore = penaltyScore; 
+                            bestPatternIndex = i; 
+                        }
+                    }
+                    return bestPatternIndex;
+                };
+
+                const setupTimingPattern = function() {
+                    for (let r = 8; r < qrGridModuleCount - 8; r += 1) {
+                        if (qrGridModules[r][6] != null) continue;
+                        qrGridModules[r][6] = (r % 2 === 0);
+                    }
+                    for (let c = 8; c < qrGridModuleCount - 8; c += 1) {
+                        if (qrGridModules[6][c] != null) continue;
+                        qrGridModules[6][c] = (c % 2 === 0);
+                    }
+                };
+
+                const setupPositionAdjustPattern = function() {
+                    const patternPositions = QRUtils.getPatternPosition(qrTypeNumber);
+                    for (let i = 0; i < patternPositions.length; i += 1) {
+                        for (let j = 0; j < patternPositions.length; j += 1) {
+                            const row = patternPositions[i]; 
+                            const col = patternPositions[j];
+                            if (qrGridModules[row][col] != null) continue;
+                            for (let r = -2; r <= 2; r += 1) {
+                                for (let c = -2; c <= 2; c += 1) {
+                                    if (r === -2 || r === 2 || c === -2 || c === 2 || (r === 0 && c === 0) ) {
+                                        qrGridModules[row + r][col + c] = true;
+                                    } else {
+                                        qrGridModules[row + r][col + c] = false;
+                                    }
+                                }
+                            }
+                        }
+                    }
+                };
+
+                const setupTypeNumber = function(testMode) {
+                    const bits = QRUtils.getBCHTypeNumber(qrTypeNumber);
+                    for (let i = 0; i < 18; i += 1) {
+                        const modVal = (!testMode && ( (bits >> i) & 1) === 1);
+                        qrGridModules[Math.floor(i / 3)][i % 3 + qrGridModuleCount - 8 - 3] = modVal;
+                    }
+                    for (let i = 0; i < 18; i += 1) {
+                        const modVal = (!testMode && ( (bits >> i) & 1) === 1);
+                        qrGridModules[i % 3 + qrGridModuleCount - 8 - 3][Math.floor(i / 3)] = modVal;
+                    }
+                };
+
+                const setupTypeInfo = function(testMode, maskPattern) {
+                    const data = (qrErrorCorrectionLevel << 3) | maskPattern;
+                    const bits = QRUtils.getBCHTypeInfo(data);
+                    for (let i = 0; i < 15; i += 1) {
+                        const modVal = (!testMode && ( (bits >> i) & 1) === 1);
+                        if (i < 6) qrGridModules[i][8] = modVal;
+                        else if (i < 8) qrGridModules[i + 1][8] = modVal;
+                        else qrGridModules[qrGridModuleCount - 15 + i][8] = modVal;
+                    }
+                    for (let i = 0; i < 15; i += 1) {
+                        const modVal = (!testMode && ( (bits >> i) & 1) === 1);
+                        if (i < 8) qrGridModules[8][qrGridModuleCount - i - 1] = modVal;
+                        else if (i < 9) qrGridModules[8][qrGridModuleCount - 15 + i] = modVal; // standard offset alignment mapping
+                        else qrGridModules[8][15 - i - 1] = modVal;
+                    }
+                    qrGridModules[qrGridModuleCount - 8][8] = (!testMode);
+                };
+
+                const mapDataCodewordsToGrid = function(dataCodewords, maskPattern) {
+                    let incrementValue = -1; 
+                    let currentRow = qrGridModuleCount - 1; 
+                    let currentBitIndex = 7; 
+                    let currentByteIndex = 0;
+                    const maskEvaluator = QRUtils.getMaskFunction(maskPattern);
+
+                    for (let currentCol = qrGridModuleCount - 1; currentCol > 0; currentCol -= 2) {
+                        if (currentCol === 6) currentCol -= 1;
+                        while (true) {
+                            for (let c = 0; c < 2; c += 1) {
+                                if (qrGridModules[currentRow][currentCol - c] == null) {
+                                    let isDarkModule = false;
+                                    if (currentByteIndex < dataCodewords.length) {
+                                        isDarkModule = ( ( (dataCodewords[currentByteIndex] >>> currentBitIndex) & 1) === 1);
+                                    }
+                                    const applyMaskXor = maskEvaluator(currentRow, currentCol - c);
+                                    if (applyMaskXor) isDarkModule = !isDarkModule;
+                                    qrGridModules[currentRow][currentCol - c] = isDarkModule;
+                                    currentBitIndex -= 1;
+                                    if (currentBitIndex === -1) { 
+                                        currentByteIndex += 1; 
+                                        currentBitIndex = 7; 
+                                    }
+                                }
+                            }
+                            currentRow += incrementValue;
+                            if (currentRow < 0 || qrGridModuleCount <= currentRow) { 
+                                currentRow -= incrementValue; 
+                                incrementValue = -incrementValue; 
+                                break; 
+                            }
+                        }
+                    }
+                };
+
+                const interleaveErrorCorrection = function(bitBuffer, rsBlocksList) {
+                    let bufferOffset = 0; 
+                    let maxDataCodewordsCount = 0; 
+                    let maxECCodewordsCount = 0;
+                    const dataBlocks = new Array(rsBlocksList.length); 
+                    const ecBlocks = new Array(rsBlocksList.length);
+
+                    for (let r = 0; r < rsBlocksList.length; r += 1) {
+                        const dataCodewordsCount = rsBlocksList[r].dataCount;
+                        const ecCodewordsCount = rsBlocksList[r].totalCount - dataCodewordsCount;
+
+                        maxDataCodewordsCount = Math.max(maxDataCodewordsCount, dataCodewordsCount);
+                        maxECCodewordsCount = Math.max(maxECCodewordsCount, ecCodewordsCount);
+
+                        dataBlocks[r] = new Array(dataCodewordsCount);
+                        for (let i = 0; i < dataBlocks[r].length; i += 1) {
+                            dataBlocks[r][i] = 0xff & bitBuffer.getBuffer()[i + bufferOffset];
+                        }
+                        bufferOffset += dataCodewordsCount;
+
+                        const generatorPolynomial = QRUtils.getErrorCorrectPolynomial(ecCodewordsCount);
+                        const rawDataPolynomial = createGaloisFieldPolynomial(dataBlocks[r], generatorPolynomial.getLength() - 1);
+                        const divisionRemainderPolynomial = rawDataPolynomial.mod(generatorPolynomial);
+                        
+                        ecBlocks[r] = new Array(generatorPolynomial.getLength() - 1);
+                        for (let i = 0; i < ecBlocks[r].length; i += 1) {
+                            const modulusRemainderIndex = i + divisionRemainderPolynomial.getLength() - ecBlocks[r].length;
+                            ecBlocks[r][i] = (modulusRemainderIndex >= 0) ? divisionRemainderPolynomial.getAt(modulusRemainderIndex) : 0;
+                        }
+                    }
+
+                    let totalCodewordsCount = 0;
+                    for (let i = 0; i < rsBlocksList.length; i += 1) totalCodewordsCount += rsBlocksList[i].totalCount;
+                    
+                    const combinedOutputCodewords = new Array(totalCodewordsCount); 
+                    let outputIndex = 0;
+
+                    for (let i = 0; i < maxDataCodewordsCount; i += 1) {
+                        for (let r = 0; r < rsBlocksList.length; r += 1) {
+                            if (i < dataBlocks[r].length) { 
+                                combinedOutputCodewords[outputIndex] = dataBlocks[r][i]; 
+                                outputIndex += 1; 
+                            }
+                        }
+                    }
+                    for (let i = 0; i < maxECCodewordsCount; i += 1) {
+                        for (let r = 0; r < rsBlocksList.length; r += 1) {
+                            if (i < ecBlocks[r].length) { 
+                                combinedOutputCodewords[outputIndex] = ecBlocks[r][i]; 
+                                outputIndex += 1; 
+                            }
+                        }
+                    }
+                    return combinedOutputCodewords;
+                };
+
+                const compileFinalDataCodewords = function(version, eccLevel, dataSegments) {
+                    const rsBlocksConfig = QRReedSolomonBlock.getRSBlocks(version, eccLevel);
+                    const bitBuffer = createBitBuffer();
+                    
+                    for (let i = 0; i < dataSegments.length; i += 1) {
+                        const segment = dataSegments[i];
+                        bitBuffer.put(segment.getMode(), 4);
+                        bitBuffer.put(segment.getLength(), QRUtils.getLengthInBits(segment.getMode(), version) );
+                        segment.write(bitBuffer);
+                    }
+                    
+                    let totalDataCapacityBytes = 0;
+                    for (let i = 0; i < rsBlocksConfig.length; i += 1) totalDataCapacityBytes += rsBlocksConfig[i].dataCount;
+                    
+                    if (bitBuffer.getLengthInBits() > totalDataCapacityBytes * 8) throw 'QR bit stream size overflow capacity';
+                    
+                    // Terminate bit stream
+                    if (bitBuffer.getLengthInBits() + 4 <= totalDataCapacityBytes * 8) bitBuffer.put(0, 4);
+                    
+                    // Align buffer length to byte boundaries
+                    while (bitBuffer.getLengthInBits() % 8 !== 0) bitBuffer.putBit(false);
+                    
+                    // Fill remaining capacity with padding patterns
+                    while (true) {
+                        if (bitBuffer.getLengthInBits() >= totalDataCapacityBytes * 8) break;
+                        bitBuffer.put(PAD0, 8);
+                        if (bitBuffer.getLengthInBits() >= totalDataCapacityBytes * 8) break;
+                        bitBuffer.put(PAD1, 8);
+                    }
+                    return interleaveErrorCorrection(bitBuffer, rsBlocksConfig);
+                };
+
+                qrSelfObject.addData = function(dataString) {
+                    qrDataSegmentsList.push(create8BitByteSegment(dataString));
+                    qrDataCache = null;
+                };
+
+                qrSelfObject.isDark = function(row, col) { return qrGridModules[row][col]; };
+                qrSelfObject.getModuleCount = function() { return qrGridModuleCount; };
+                qrSelfObject.make = function() {
+                    initializeGridMatrix(false, chooseBestMaskPattern() );
+                };
+
+                qrSelfObject.createSvgTag = function(cellSize, margin) {
+                    cellSize = cellSize || 2;
+                    margin = (typeof margin === 'undefined') ? cellSize * 4 : margin;
+                    const totalPixelSize = qrSelfObject.getModuleCount() * cellSize + margin * 2;
+                    const pathDString = 'l' + cellSize + ',0 0,' + cellSize + ' -' + cellSize + ',0 0,-' + cellSize + 'z ';
+                    let svgOutput = '';
+                    // Fixed px dimensions — CSS rules in .qr-svg-wrapper svg override these
+                    // but having real dimensions prevents 0x0 render on some mobile browsers
+                    svgOutput += '<svg version="1.1" xmlns="http://www.w3.org/2000/svg"';
+                    svgOutput += ' width="' + totalPixelSize + '" height="' + totalPixelSize + '" viewBox="0 0 ' + totalPixelSize + ' ' + totalPixelSize + '">';
+                    svgOutput += '<rect width="100%" height="100%" fill="white"/>';
+                    svgOutput += '<path d="';
+                    for (let r = 0; r < qrSelfObject.getModuleCount(); r += 1) {
+                        const pixelYPosition = r * cellSize + margin;
+                        for (let c = 0; c < qrSelfObject.getModuleCount(); c += 1) {
+                            if (qrSelfObject.isDark(r, c)) {
+                                const pixelXPosition = c * cellSize + margin;
+                                svgOutput += 'M' + pixelXPosition + ',' + pixelYPosition + pathDString;
+                            }
+                        }
+                    }
+                    svgOutput += '" stroke="transparent" fill="black"/></svg>';
+                    return svgOutput;
+                };
+
+                // Fixed-size SVG for print layout (real px dimensions ensure correct mm scaling)
+                qrSelfObject.createFixedSvgTag = function(cellSize, margin) {
+                    cellSize = cellSize || 2;
+                    margin = (typeof margin === 'undefined') ? cellSize * 4 : margin;
+                    
+                    const totalPixelSize = qrSelfObject.getModuleCount() * cellSize + margin * 2;
+                    const pathDString = 'l' + cellSize + ',0 0,' + cellSize + ' -' + cellSize + ',0 0,-' + cellSize + 'z ';
+                    let svgOutput = '';
+                    
+                    svgOutput += '<svg version="1.1" xmlns="http://www.w3.org/2000/svg"';
+                    svgOutput += ' width="' + totalPixelSize + '" height="' + totalPixelSize + '" viewBox="0 0 ' + totalPixelSize + ' ' + totalPixelSize + '">';
+                    svgOutput += '<rect width="100%" height="100%" fill="white"/>';
+                    svgOutput += '<path d="';
+                    
+                    for (let r = 0; r < qrSelfObject.getModuleCount(); r += 1) {
+                        const pixelYPosition = r * cellSize + margin;
+                        for (let c = 0; c < qrSelfObject.getModuleCount(); c += 1) {
+                            if (qrSelfObject.isDark(r, c) ) {
+                                const pixelXPosition = c * cellSize + margin;
+                                svgOutput += 'M' + pixelXPosition + ',' + pixelYPosition + pathDString;
+                            }
+                        }
+                    }
+                    svgOutput += '" stroke="transparent" fill="black"/></svg>';
+                    return svgOutput;
+                };
+
+                // Render QR code to canvas (highly reliable, hardware-accelerated for mobile)
+                qrSelfObject.renderToCanvas = function(canvasId, cellSize, margin) {
+                    cellSize = cellSize || 2;
+                    margin = (typeof margin === 'undefined') ? cellSize * 4 : margin;
+                    const canvas = document.getElementById(canvasId);
+                    if (!canvas) return;
+                    const moduleCount = qrSelfObject.getModuleCount();
+                    const totalPixelSize = moduleCount * cellSize + margin * 2;
+                    canvas.width = totalPixelSize;
+                    canvas.height = totalPixelSize;
+                    const ctx = canvas.getContext('2d');
+                    ctx.fillStyle = '#ffffff';
+                    ctx.fillRect(0, 0, totalPixelSize, totalPixelSize);
+                    ctx.fillStyle = '#000000';
+                    for (let r = 0; r < moduleCount; r += 1) {
+                        const y = r * cellSize + margin;
+                        for (let c = 0; c < moduleCount; c += 1) {
+                            if (qrSelfObject.isDark(r, c)) {
+                                const x = c * cellSize + margin;
+                                ctx.fillRect(x, y, cellSize, cellSize);
+                            }
+                        }
+                    }
+                };
+
+                return qrSelfObject;
+            };
+
+            return generateQRCode;
+        })();
+
+
+        // --- 6. CORE APPLICATION STATE & ACTION CONTROLLER ---
+        let currentWallet = {
+            privateKey: '',
+            address: ''
+        };
+
+        // Update checklist security level indicators dynamically
+        function updateSecurityStatus() {
+            const isOfflineChecked = document.getElementById('check-offline').checked;
+            const isPrivateModeChecked = document.getElementById('check-private').checked;
+            const isSecurePrinterChecked = document.getElementById('check-printer').checked;
+            
+            const ratingIndicatorElement = document.getElementById('security-level-indicator');
+            const totalChecksCompleted = (isOfflineChecked ? 1 : 0) + (isPrivateModeChecked ? 1 : 0) + (isSecurePrinterChecked ? 1 : 0);
+            
+            ratingIndicatorElement.className = 'security-level';
+            
+            if (totalChecksCompleted === 0) {
+                ratingIndicatorElement.innerText = '🔴 Vulnerable Environment';
+                ratingIndicatorElement.classList.add('vulnerable');
+            } else if (totalChecksCompleted < 3) {
+                ratingIndicatorElement.innerText = '🟡 Moderately Secure';
+                ratingIndicatorElement.classList.add('moderate');
+            } else {
+                ratingIndicatorElement.innerText = '🟢 Secure Offline Environment';
+                ratingIndicatorElement.classList.add('secure');
+            }
+        }
+
+        // Generate private key and derive TRON base58check mainnet address
+        function generateNewWallet() {
+            try {
+                // Cryptographically secure pseudorandom number generator (CSPRNG) support validation
+                if (!window.crypto || !window.crypto.getRandomValues) {
+                    throw new Error("Cryptographically secure random number generator (CSPRNG) is not supported by this browser.");
+                }
+
+                // Generate 32 bytes from CSPRNG
+                const randomBytes = new Uint8Array(32);
+                window.crypto.getRandomValues(randomBytes);
+                
+                // Format bytes to a hex string representing the private key
+                let privateKeyHex = '';
+                for (let i = 0; i < randomBytes.length; i++) {
+                    privateKeyHex += randomBytes[i].toString(16).padStart(2, '0');
+                }
+                
+                // Calculate public key using Elliptic Curve Point Multiplication Q = k * G
+                const scalarPrivateKey = BigInt('0x' + privateKeyHex);
+
+                // Boundary verification: Private key must be strictly in the range [1, N-1]
+                // (secp256k1 order N = 0xfffffffffffffffffffffffffffffffebaaedce6af48a03bbfd25e8cd0364141)
+                const SECP256K1_N = 0xfffffffffffffffffffffffffffffffebaaedce6af48a03bbfd25e8cd0364141n;
+                if (scalarPrivateKey <= 0n || scalarPrivateKey >= SECP256K1_N) {
+                    // Invalid scalar range (astronomically rare but mathematically possible), regenerate
+                    generateNewWallet();
+                    return;
+                }
+                
+                const derivedPublicKeyPoint = ellipticCurveMultiply(scalarPrivateKey);
+                
+                if (!derivedPublicKeyPoint) {
+                    // Vertical coordinate cancellation (edge case), regenerate
+                    generateNewWallet();
+                    return;
+                }
+                
+                const [publicKeyX, publicKeyY] = derivedPublicKeyPoint;
+                const publicKeyXHex = publicKeyX.toString(16).padStart(64, '0');
+                const publicKeyYHex = publicKeyY.toString(16).padStart(64, '0');
+                
+                // Create uncompressed public key bytes (64 bytes total, excluding the leading 0x04 format prefix)
+                const uncompressedPublicKeyBytes = new Uint8Array(64);
+                for (let i = 0; i < 32; i++) {
+                    uncompressedPublicKeyBytes[i] = parseInt(publicKeyXHex.substring(i * 2, i * 2 + 2), 16);
+                    uncompressedPublicKeyBytes[32 + i] = parseInt(publicKeyYHex.substring(i * 2, i * 2 + 2), 16);
+                }
+                
+                // Compute Keccak-256 hash of the uncompressed public key
+                const publicKeyKeccakHash = computeKeccak256(uncompressedPublicKeyBytes);
+                
+                // Extract last 20 bytes and prepend version prefix 0x41 for TRON Mainnet
+                const versionedAddressBytes = new Uint8Array(21);
+                versionedAddressBytes[0] = 0x41;
+                versionedAddressBytes.set(publicKeyKeccakHash.slice(12), 1); // 12-31 index slice is last 20 bytes
+                
+                // Base58Check checksum = first 4 bytes of Double SHA-256 of the 21-byte versioned address payload
+                const roundOneSha256 = computeSha256(versionedAddressBytes);
+                const roundTwoSha256 = computeSha256(roundOneSha256);
+                const checksumBytes = roundTwoSha256.slice(0, 4);
+                
+                // Combine versioned address and checksum bytes
+                const finalAddressBuffer = new Uint8Array(25);
+                finalAddressBuffer.set(versionedAddressBytes);
+                finalAddressBuffer.set(checksumBytes, 21);
+                
+                // Encode to Base58Check representing the final TRON address
+                const encodedTronAddress = encodeBase58(finalAddressBuffer);
+                
+                // Store state
+                currentWallet.privateKey = privateKeyHex;
+                currentWallet.address = encodedTronAddress;
+                
+                // Update Screen UI
+                document.getElementById('address-text').innerText = encodedTronAddress;
+                document.getElementById('privkey-text').innerText = privateKeyHex;
+                
+                // Reveal wallet section FIRST (display:flex must be painted before SVG insert)
+                const walletEl = document.getElementById('wallet-display');
+                walletEl.style.display = 'flex';
+
+                // Build QR data (computation only, no DOM yet)
+                const screenAddressQR = qrcode(4, 'M');
+                screenAddressQR.addData(encodedTronAddress);
+                screenAddressQR.make();
+
+                const screenPrivateKeyQR = qrcode(5, 'M');
+                screenPrivateKeyQR.addData(privateKeyHex);
+                screenPrivateKeyQR.make();
+
+                // Render screen QR codes directly to canvases inside setTimeout
+                setTimeout(function() {
+                    screenAddressQR.renderToCanvas('address-canvas', 6, 4);
+                    screenPrivateKeyQR.renderToCanvas('privkey-canvas', 6, 4);
+                    walletEl.classList.add('visible');
+                }, 100);
+
+                // Build and set print layout vector SVGs (fixed px size for correct print scale)
+                document.getElementById('print-address-text').innerText = encodedTronAddress;
+                document.getElementById('print-privkey-text').innerText = privateKeyHex;
+                document.getElementById('print-address-qr').innerHTML = screenAddressQR.createFixedSvgTag(4, 4);
+                document.getElementById('print-privkey-qr').innerHTML = screenPrivateKeyQR.createFixedSvgTag(4, 4);
+                document.getElementById('print-action-btn').style.display = 'flex';
+                document.getElementById('clear-action-btn').style.display = 'flex';
+                
+            } catch (err) {
+                alert('Wallet Generation Error: ' + err.message);
+                console.error(err);
+            }
+        }
+
+        // Wipe session memory and DOM values
+        function clearSession() {
+            // Secure memory wipe
+            currentWallet.privateKey = '';
+            currentWallet.address = '';
+            
+            // Clear screen elements
+            document.getElementById('address-text').innerText = 'Wiped';
+            document.getElementById('privkey-text').innerText = 'Wiped';
+            
+            // Clear canvases (hardware-accelerated context wipe)
+            const canvasAddress = document.getElementById('address-canvas');
+            const canvasPrivkey = document.getElementById('privkey-canvas');
+            if (canvasAddress) canvasAddress.getContext('2d').clearRect(0, 0, canvasAddress.width, canvasAddress.height);
+            if (canvasPrivkey) canvasPrivkey.getContext('2d').clearRect(0, 0, canvasPrivkey.width, canvasPrivkey.height);
+            
+            // Clear printable page elements
+            document.getElementById('print-address-text').innerText = '';
+            document.getElementById('print-privkey-text').innerText = '';
+            document.getElementById('print-address-qr').innerHTML = '';
+            document.getElementById('print-privkey-qr').innerHTML = '';
+            
+            // Hide display elements
+            const walletEl = document.getElementById('wallet-display');
+            walletEl.classList.remove('visible');
+            // Wait for opacity fade before hiding
+            setTimeout(() => { walletEl.style.display = 'none'; }, 350);
+            document.getElementById('print-action-btn').style.display = 'none';
+            document.getElementById('clear-action-btn').style.display = 'none';
+            
+            alert('Session cleared. All keys overwritten in memory and removed from page.');
+        }
+
+        // Copy utility using in-place visual icon change
+        function copyToClipboard(elementId, button) {
+            const textToCopy = document.getElementById(elementId).innerText;
+
+            // Visual feedback helper
+            function showSuccess() {
+                if (!button) return;
+                const copyIcon = button.querySelector('.copy-icon');
+                const checkIcon = button.querySelector('.check-icon');
+                if (copyIcon && checkIcon) {
+                    copyIcon.style.display = 'none';
+                    checkIcon.style.display = 'block';
+                    button.style.borderColor = 'rgba(48, 209, 88, 0.4)';
+                    setTimeout(() => {
+                        copyIcon.style.display = 'block';
+                        checkIcon.style.display = 'none';
+                        button.style.borderColor = '';
+                    }, 1500);
+                }
+            }
+
+            // Fallback: legacy execCommand (works on Android content://, file://, no-HTTPS contexts)
+            function execCommandFallback() {
+                try {
+                    const textarea = document.createElement('textarea');
+                    textarea.value = textToCopy;
+                    textarea.setAttribute('readonly', '');
+                    textarea.style.cssText = 'position:fixed;top:-9999px;left:-9999px;opacity:0;';
+                    document.body.appendChild(textarea);
+                    textarea.focus();
+                    textarea.select();
+                    // On iOS, select() doesn't work — use setSelectionRange
+                    textarea.setSelectionRange(0, textarea.value.length);
+                    const success = document.execCommand('copy');
+                    document.body.removeChild(textarea);
+                    if (success) {
+                        showSuccess();
+                    } else {
+                        alert('Copy failed. Please select and copy manually.');
+                    }
+                } catch (e) {
+                    alert('Copy failed. Please select and copy manually.');
+                }
+            }
+
+            // Try modern Clipboard API first; fall back on any error
+            if (navigator.clipboard && navigator.clipboard.writeText) {
+                navigator.clipboard.writeText(textToCopy)
+                    .then(showSuccess)
+                    .catch(() => execCommandFallback());
+            } else {
+                execCommandFallback();
+            }
+        }
+
+        // Trigger native browser printing dialog
+        function triggerPrint() {
+            if (!currentWallet.address || !currentWallet.privateKey) {
+                alert('Please generate keys before printing.');
+                return;
+            }
+            window.print();
+        }
+
+        // Page load initialization
+        window.onload = function() {
+            updateSecurityStatus();
+        }
+    </script>
+</body>
+</html>
