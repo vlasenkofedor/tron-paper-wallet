@@ -14,7 +14,7 @@
 
 ## 💾 Download & Use Offline
 
-<a href="coinductor-paper.html" download="coinductor-paper.html">
+<a href="https://github.com/vlasenkofedor/tron-paper-wallet/raw/main/coinductor-paper.html" download="coinductor-paper.html">
   <img src="https://img.shields.io/badge/⬇ Download-coinductor--paper.html-brightgreen?style=for-the-badge" alt="Download coinductor-paper.html"/>
 </a>
 
